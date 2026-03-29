@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Avatar,
@@ -17,8 +16,10 @@ import {
   Stepper,
   Stack,
   TextField,
+  ThemeProvider,
   Typography
 } from "@mui/material";
+import { alpha, createTheme } from "@mui/material/styles";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -38,6 +39,33 @@ const STEP_ORDER = [
   STEPS.confirm
 ];
 
+const theme = createTheme({
+  palette: {
+    mode: "light",
+    primary: { main: "#5B5BD6" },
+    secondary: { main: "#0EA5A6" },
+    background: {
+      default: "#F4F7FF",
+      paper: "#FFFFFF"
+    }
+  },
+  shape: { borderRadius: 18 },
+  typography: {
+    fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 14,
+          textTransform: "none",
+          fontWeight: 700
+        }
+      }
+    }
+  }
+});
+
 function App() {
   const [step, setStep] = useState(STEPS.intro);
   const [userInfo, setUserInfo] = useState({
@@ -52,7 +80,6 @@ function App() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const confirmationRef = useRef(null);
   const activeStep = STEP_ORDER.indexOf(step);
 
   const selectedSessions = useMemo(
@@ -77,6 +104,10 @@ function App() {
   }, [sessions]);
 
   const timeKeys = useMemo(() => Object.keys(sessionsByTime), [sessionsByTime]);
+  const selectedRoomIds = useMemo(
+    () => new Set(selectedSessions.map((session) => session.roomId)),
+    [selectedSessions]
+  );
 
   useEffect(() => {
     if (step === STEPS.sessions) {
@@ -154,6 +185,7 @@ function App() {
       updatedSelectionIds = updatedSelectionIds.slice(1);
     }
 
+    updatedSelectionIds = updatedSelectionIds.filter((id) => id !== nextSession.id);
     updatedSelectionIds.push(nextSession.id);
     setSelectedSessionIds(updatedSelectionIds);
     setSuccess(reasonMessage[reason]);
@@ -168,9 +200,9 @@ function App() {
       return;
     }
 
-    const existingSameRoom = selectedSessions.find(
-      (session) => session.roomId === targetSession.roomId
-    );
+    const existingSameRoom = selectedSessions.find((session) => {
+      return session.roomId === targetSession.roomId && session.id !== targetSession.id;
+    });
     if (existingSameRoom) {
       replaceSelection(targetSession, "room");
       return;
@@ -234,16 +266,53 @@ function App() {
     }
   }
 
-  async function saveAsImage() {
-    if (!confirmationRef.current) {
-      return;
-    }
-    const canvas = await html2canvas(confirmationRef.current, { scale: 2 });
-    const image = canvas.toDataURL("image/png");
+  function saveAsImage() {
+    const safeName = `${user?.name || ""} ${user?.lastName || ""}`.trim() || "Guest";
+    const rows = selectedSessions
+      .map((session) => {
+        return `<tspan x="40" dy="28">${session.roomName} - ${session.startTime} to ${session.endTime}</tspan>`;
+      })
+      .join("");
+
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350">
+        <defs>
+          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#EEF2FF"/>
+            <stop offset="100%" stop-color="#ECFEFF"/>
+          </linearGradient>
+          <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96"/>
+            <stop offset="100%" stop-color="#F8FAFC" stop-opacity="0.93"/>
+          </linearGradient>
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#64748B" flood-opacity="0.22"/>
+          </filter>
+        </defs>
+        <rect width="1080" height="1350" fill="url(#bg)"/>
+        <circle cx="130" cy="150" r="220" fill="#A5B4FC" fill-opacity="0.16"/>
+        <circle cx="930" cy="260" r="280" fill="#67E8F9" fill-opacity="0.16"/>
+        <rect x="40" y="120" width="1000" height="1080" rx="38" fill="url(#card)" filter="url(#shadow)"/>
+        <text x="80" y="220" font-size="54" font-family="Inter, Arial, sans-serif" font-weight="700" fill="#1E293B">Event Confirmation</text>
+        <text x="80" y="275" font-size="30" font-family="Inter, Arial, sans-serif" fill="#475569">Your booking has been recorded.</text>
+        <line x1="80" y1="320" x2="1000" y2="320" stroke="#CBD5E1" stroke-width="2"/>
+        <text x="80" y="390" font-size="32" font-family="Inter, Arial, sans-serif" font-weight="600" fill="#334155">Participant</text>
+        <text x="80" y="440" font-size="30" font-family="Inter, Arial, sans-serif" fill="#0F172A">${safeName}</text>
+        <text x="80" y="490" font-size="27" font-family="Inter, Arial, sans-serif" fill="#475569">${user?.phoneNumber || ""}</text>
+        <text x="80" y="580" font-size="32" font-family="Inter, Arial, sans-serif" font-weight="600" fill="#334155">Sessions</text>
+        <text y="620" font-size="28" font-family="Inter, Arial, sans-serif" fill="#0F172A">
+          ${rows || '<tspan x="40" dy="28">No sessions selected.</tspan>'}
+        </text>
+      </svg>
+    `;
+
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const image = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.download = `appointment-confirmation-${user?.id || "user"}.png`;
+    link.download = `appointment-confirmation-${user?.id || "user"}.svg`;
     link.href = image;
     link.click();
+    URL.revokeObjectURL(image);
   }
 
   function exitToIntro() {
@@ -259,31 +328,63 @@ function App() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 5 }}>
-      <Stack spacing={3}>
+    <ThemeProvider theme={theme}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at top left, #E0E7FF 0%, transparent 45%), radial-gradient(circle at bottom right, #CCFBF1 0%, transparent 40%), #F4F7FF",
+          py: 2
+        }}
+      >
+        <Container maxWidth="sm" sx={{ py: 2 }}>
+          <Stack spacing={2}>
         <Paper
           elevation={0}
           sx={{
-            p: 3,
-            borderRadius: 4,
+            p: 2.5,
+            borderRadius: 5,
+            border: "1px solid",
+            borderColor: alpha(theme.palette.primary.main, 0.14),
+            backdropFilter: "blur(12px)",
             background:
-              "linear-gradient(135deg, rgba(25,118,210,0.10) 0%, rgba(156,39,176,0.10) 100%)"
+              "linear-gradient(130deg, rgba(255,255,255,0.72) 0%, rgba(238,242,255,0.64) 100%)",
+            boxShadow: "0 18px 36px rgba(30, 41, 59, 0.10)"
           }}
         >
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
-            <Avatar sx={{ bgcolor: "primary.main", width: 56, height: 56 }}>EV</Avatar>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Avatar
+              sx={{
+                bgcolor: "primary.main",
+                width: 46,
+                height: 46,
+                boxShadow: "0 8px 20px rgba(91, 91, 214, 0.45)"
+              }}
+            >
+              EV
+            </Avatar>
             <Box>
-              <Typography variant="h4" fontWeight={700}>
+              <Typography variant="h5" fontWeight={800}>
                 Event Appointment Manager
               </Typography>
-              <Typography color="text.secondary">
-                Book up to 4 sessions with smart availability and instant confirmation.
+              <Typography color="text.secondary" fontSize={14}>
+                Phone-first booking for your one-day event.
               </Typography>
             </Box>
           </Stack>
         </Paper>
 
-        <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 1.5,
+            borderRadius: 5,
+            border: "1px solid",
+            borderColor: alpha(theme.palette.primary.main, 0.1),
+            background: alpha("#FFFFFF", 0.72),
+            backdropFilter: "blur(10px)"
+          }}
+        >
           <Stepper activeStep={activeStep} alternativeLabel>
             <Step>
               <StepLabel>Welcome</StepLabel>
@@ -307,9 +408,18 @@ function App() {
         {success && <Alert severity="success">{success}</Alert>}
 
         {step === STEPS.intro && (
-          <Card sx={{ borderRadius: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 5,
+              border: "1px solid",
+              borderColor: alpha(theme.palette.primary.main, 0.14),
+              background: alpha("#FFFFFF", 0.74),
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
+            }}
+          >
             <CardContent>
-              <Stack spacing={3}>
+              <Stack spacing={2.5}>
                 <Typography variant="h5" fontWeight={700}>
                   Welcome
                 </Typography>
@@ -322,7 +432,12 @@ function App() {
                   <Chip label="4 Time Slots" color="secondary" />
                   <Chip label="Max 4 Selections" />
                 </Stack>
-                <Button variant="contained" size="large" onClick={() => setStep(STEPS.userInfo)}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  sx={{ py: 1.2, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
+                  onClick={() => setStep(STEPS.userInfo)}
+                >
                   Start Registration
                 </Button>
               </Stack>
@@ -331,14 +446,23 @@ function App() {
         )}
 
         {step === STEPS.userInfo && (
-          <Card sx={{ borderRadius: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 5,
+              border: "1px solid",
+              borderColor: alpha(theme.palette.primary.main, 0.14),
+              background: alpha("#FFFFFF", 0.74),
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
+            }}
+          >
             <CardContent>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
                   Personal Information
                 </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Name"
@@ -346,9 +470,10 @@ function App() {
                       onChange={(event) =>
                         setUserInfo((prev) => ({ ...prev, name: event.target.value }))
                       }
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                     />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Last Name"
@@ -356,9 +481,10 @@ function App() {
                       onChange={(event) =>
                         setUserInfo((prev) => ({ ...prev, lastName: event.target.value }))
                       }
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                     />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Age"
@@ -367,12 +493,14 @@ function App() {
                       onChange={(event) =>
                         setUserInfo((prev) => ({ ...prev, age: event.target.value }))
                       }
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                     />
                   </Grid>
                 </Grid>
                 <Button
                   variant="contained"
                   size="large"
+                  sx={{ py: 1.2, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                   onClick={() => setStep(STEPS.phone)}
                   disabled={!userInfo.name || !userInfo.lastName || !userInfo.age}
                 >
@@ -384,7 +512,16 @@ function App() {
         )}
 
         {step === STEPS.phone && (
-          <Card sx={{ borderRadius: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 5,
+              border: "1px solid",
+              borderColor: alpha(theme.palette.primary.main, 0.14),
+              background: alpha("#FFFFFF", 0.74),
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
+            }}
+          >
             <CardContent>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
@@ -395,10 +532,12 @@ function App() {
                   fullWidth
                   value={phoneNumber}
                   onChange={(event) => setPhoneNumber(event.target.value)}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
                 />
                 <Button
                   variant="contained"
                   size="large"
+                  sx={{ py: 1.2, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                   onClick={createUser}
                   disabled={!phoneNumber || loading}
                 >
@@ -410,31 +549,51 @@ function App() {
         )}
 
         {step === STEPS.sessions && (
-          <Card sx={{ borderRadius: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 5,
+              border: "1px solid",
+              borderColor: alpha(theme.palette.primary.main, 0.14),
+              background: alpha("#FFFFFF", 0.74),
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
+            }}
+          >
             <CardContent>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
                   Select Sessions
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Pick up to 4 sessions. Selecting another session in the same room or
-                  time slot automatically replaces your previous choice.
+                  Pick up to 4 sessions. Each room can only be selected once overall.
+                  When a room is selected in one slot, that room is disabled in all others.
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
                   <Chip label={`Selected: ${selectedSessionIds.length} / 4`} color="primary" />
-                  <Chip label="Auto-replace on conflicts" variant="outlined" />
+                  <Chip label="Unique room across all slots" variant="outlined" />
                 </Stack>
                 {timeKeys.map((timeKey) => (
-                  <Paper key={timeKey} variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
+                  <Paper
+                    key={timeKey}
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 4,
+                      borderColor: alpha(theme.palette.primary.main, 0.18),
+                      background: alpha("#FFFFFF", 0.75)
+                    }}
+                  >
                     <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
                       {timeKey.replace("-", " - ")}
                     </Typography>
                     <Grid container spacing={1.5}>
                       {sessionsByTime[timeKey].map((session) => {
                         const selected = selectedSessionIds.includes(session.id);
-                        const disabled = session.isFull && !selected;
+                        const roomTakenElsewhere =
+                          selectedRoomIds.has(session.roomId) && !selected;
+                        const disabled = (session.isFull && !selected) || roomTakenElsewhere;
                         return (
-                          <Grid item xs={12} sm={6} md={4} key={session.id}>
+                          <Grid item xs={12} sm={6} key={session.id}>
                             <Button
                               fullWidth
                               variant={selected ? "contained" : "outlined"}
@@ -442,8 +601,9 @@ function App() {
                               onClick={() => toggleSession(session)}
                               disabled={disabled || loading}
                               sx={{
-                                py: 1.3,
-                                justifyContent: "space-between"
+                                py: 1.2,
+                                justifyContent: "space-between",
+                                borderRadius: 3
                               }}
                             >
                               {session.roomName} - {session.availableSpots} left
@@ -457,6 +617,7 @@ function App() {
                 <Button
                   variant="contained"
                   size="large"
+                  sx={{ py: 1.2, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                   onClick={submitReservations}
                   disabled={loading}
                 >
@@ -468,7 +629,16 @@ function App() {
         )}
 
         {step === STEPS.confirm && (
-          <Card ref={confirmationRef} sx={{ borderRadius: 4 }}>
+          <Card
+            sx={{
+              borderRadius: 5,
+              border: "1px solid",
+              borderColor: alpha(theme.palette.primary.main, 0.14),
+              background: alpha("#FFFFFF", 0.74),
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
+            }}
+          >
             <CardContent>
               <Stack spacing={2.5}>
                 <Typography variant="h6" fontWeight={700}>
@@ -488,8 +658,12 @@ function App() {
                   />
                 ))}
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                  <Button variant="contained" onClick={saveAsImage}>
-                    Save as Image
+                  <Button
+                    variant="contained"
+                    sx={{ py: 1.1, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
+                    onClick={saveAsImage}
+                  >
+                    Download Confirmation
                   </Button>
                   <Button variant="outlined" color="inherit" onClick={exitToIntro}>
                     Exit
@@ -499,8 +673,10 @@ function App() {
             </CardContent>
           </Card>
         )}
-      </Stack>
-    </Container>
+          </Stack>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 }
 
