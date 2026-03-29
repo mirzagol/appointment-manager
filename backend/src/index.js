@@ -7,10 +7,64 @@ const prisma = require("./db");
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const FRONTEND_DIST_PATH = path.join(__dirname, "../../frontend/dist");
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "admin";
 
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
+
+function toCsv(rows) {
+  if (!rows.length) {
+    return "";
+  }
+  const headers = Object.keys(rows[0]);
+  const escapeCell = (value) => {
+    const text = String(value ?? "");
+    if (text.includes(",") || text.includes('"') || text.includes("\n")) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  };
+  const csvLines = [headers.join(",")];
+  for (const row of rows) {
+    csvLines.push(headers.map((header) => escapeCell(row[header])).join(","));
+  }
+  return csvLines.join("\n");
+}
+
+function parseBasicAuth(authorizationHeader) {
+  if (!authorizationHeader || !authorizationHeader.startsWith("Basic ")) {
+    return null;
+  }
+  try {
+    const encoded = authorizationHeader.slice(6);
+    const decoded = Buffer.from(encoded, "base64").toString("utf8");
+    const separatorIndex = decoded.indexOf(":");
+    if (separatorIndex === -1) {
+      return null;
+    }
+    return {
+      username: decoded.slice(0, separatorIndex),
+      password: decoded.slice(separatorIndex + 1)
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+function requireAdmin(req, res, next) {
+  const credentials = parseBasicAuth(req.headers.authorization);
+  if (
+    !credentials ||
+    credentials.username !== ADMIN_USERNAME ||
+    credentials.password !== ADMIN_PASSWORD
+  ) {
+    res.set("WWW-Authenticate", 'Basic realm="Admin Reports"');
+    return res.status(401).json({ error: "Unauthorized admin access." });
+  }
+  return next();
+}
 
 async function expandCapacityIfAllSessionsAreFull(tx) {
   const sessions = await tx.session.findMany({
@@ -269,9 +323,109 @@ app.get("/users/:id/reservations", async (req, res) => {
   }
 });
 
+app.get("/admin/reports", requireAdmin, async (_req, res) => {
+  try {
+    const timeSlots = ["11:30-12:00", "12:00-12:30", "12:30-13:00", "13:00-13:30"];
+    const reservations = await prisma.reservation.findMany({
+      include: {
+        user: true,
+        session: {
+          include: {
+            room: true
+          }
+        }
+      }
+    });
+
+    const userMap = new Map();
+    for (const reservation of reservations) {
+      const key = reservation.user.id;
+      if (!userMap.has(key)) {
+        userMap.set(key, {
+          userId: reservation.user.id,
+          name: reservation.user.name,
+          lastName: reservation.user.lastName,
+          phoneNumber: reservation.user.phoneNumber,
+          age: reservation.user.age
+        });
+      }
+      const slotKey = `${reservation.session.startTime}-${reservation.session.endTime}`;
+      userMap.get(key)[slotKey] = reservation.session.room.name;
+    }
+
+    const peopleBySession = Array.from(userMap.values()).map((row) => {
+      const normalized = { ...row };
+      for (const slot of timeSlots) {
+        normalized[slot] = normalized[slot] || "";
+      }
+      return normalized;
+    });
+
+    const roomNames = ["Room 1", "Room 2", "Room 3", "Room 4", "Room 5", "Room 6"];
+    const roomSessionForms = roomNames.map((roomName) => {
+      const sessionBuckets = {};
+      for (const slot of timeSlots) {
+        sessionBuckets[slot] = reservations
+          .filter((reservation) => {
+            const reservationSlot = `${reservation.session.startTime}-${reservation.session.endTime}`;
+            return reservation.session.room.name === roomName && reservationSlot === slot;
+          })
+          .map((reservation) => {
+            return `${reservation.user.name} ${reservation.user.lastName}`.trim();
+          });
+      }
+
+      const maxRows = Math.max(1, ...timeSlots.map((slot) => sessionBuckets[slot].length));
+      const rows = Array.from({ length: maxRows }, (_, index) => {
+        const row = { attendeeNo: index + 1 };
+        for (const slot of timeSlots) {
+          row[slot] = sessionBuckets[slot][index] || "";
+        }
+        return row;
+      });
+
+      return {
+        room: roomName,
+        timeSlots,
+        rows
+      };
+    });
+
+    const roomSessionFormsCsv = {};
+    for (const form of roomSessionForms) {
+      roomSessionFormsCsv[form.room] = toCsv(form.rows);
+    }
+    const roomSessionFormsAll = roomSessionForms
+      .map((form) => {
+        const sectionHeader = `Room: ${form.room}`;
+        const sectionCsv = toCsv(form.rows);
+        return `${sectionHeader}\n${sectionCsv}`;
+      })
+      .join("\n\n");
+
+    return res.json({
+      peopleBySession,
+      roomSessionForms,
+      csv: {
+        peopleBySession: toCsv(peopleBySession),
+        roomSessionForms: roomSessionFormsCsv,
+        roomSessionFormsAll
+      }
+    });
+  } catch (error) {
+    console.error("GET /admin/reports error:", error);
+    return res.status(500).json({ error: "Failed to generate admin reports." });
+  }
+});
+
 app.use(express.static(FRONTEND_DIST_PATH));
 app.get("*", (req, res, next) => {
-  if (req.path.startsWith("/users") || req.path.startsWith("/sessions") || req.path.startsWith("/reservations")) {
+  if (
+    req.path.startsWith("/users") ||
+    req.path.startsWith("/sessions") ||
+    req.path.startsWith("/reservations") ||
+    req.path.startsWith("/admin")
+  ) {
     return next();
   }
   return res.sendFile(path.join(FRONTEND_DIST_PATH, "index.html"));

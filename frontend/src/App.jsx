@@ -49,7 +49,7 @@ const theme = createTheme({
       paper: "#FFFFFF"
     }
   },
-  shape: { borderRadius: 18 },
+  shape: { borderRadius: 12 },
   typography: {
     fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
   },
@@ -81,11 +81,20 @@ function App() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const activeStep = STEP_ORDER.indexOf(step);
+  const shouldCenterCards = step !== STEPS.sessions && step !== STEPS.confirm;
 
   const selectedSessions = useMemo(
     () => sessions.filter((session) => selectedSessionIds.includes(session.id)),
     [sessions, selectedSessionIds]
   );
+  const selectedSessionsByTime = useMemo(() => {
+    return [...selectedSessions].sort((a, b) => {
+      if (a.startTime !== b.startTime) {
+        return a.startTime.localeCompare(b.startTime);
+      }
+      return a.roomId - b.roomId;
+    });
+  }, [selectedSessions]);
 
   const sessionsByTime = useMemo(() => {
     const grouped = {};
@@ -235,6 +244,10 @@ function App() {
       setError("Select at least one session.");
       return;
     }
+    if (selectedSessionIds.length < 4) {
+      setError("You must select all 4 time slots before confirming.");
+      return;
+    }
 
     setError("");
     setSuccess("");
@@ -267,52 +280,124 @@ function App() {
   }
 
   function saveAsImage() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return;
+    }
+
     const safeName = `${user?.name || ""} ${user?.lastName || ""}`.trim() || "Guest";
-    const rows = selectedSessions
-      .map((session) => {
-        return `<tspan x="40" dy="28">${session.roomName} - ${session.startTime} to ${session.endTime}</tspan>`;
-      })
-      .join("");
 
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350">
-        <defs>
-          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#EEF2FF"/>
-            <stop offset="100%" stop-color="#ECFEFF"/>
-          </linearGradient>
-          <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96"/>
-            <stop offset="100%" stop-color="#F8FAFC" stop-opacity="0.93"/>
-          </linearGradient>
-          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#64748B" flood-opacity="0.22"/>
-          </filter>
-        </defs>
-        <rect width="1080" height="1350" fill="url(#bg)"/>
-        <circle cx="130" cy="150" r="220" fill="#A5B4FC" fill-opacity="0.16"/>
-        <circle cx="930" cy="260" r="280" fill="#67E8F9" fill-opacity="0.16"/>
-        <rect x="40" y="120" width="1000" height="1080" rx="38" fill="url(#card)" filter="url(#shadow)"/>
-        <text x="80" y="220" font-size="54" font-family="Inter, Arial, sans-serif" font-weight="700" fill="#1E293B">Event Confirmation</text>
-        <text x="80" y="275" font-size="30" font-family="Inter, Arial, sans-serif" fill="#475569">Your booking has been recorded.</text>
-        <line x1="80" y1="320" x2="1000" y2="320" stroke="#CBD5E1" stroke-width="2"/>
-        <text x="80" y="390" font-size="32" font-family="Inter, Arial, sans-serif" font-weight="600" fill="#334155">Participant</text>
-        <text x="80" y="440" font-size="30" font-family="Inter, Arial, sans-serif" fill="#0F172A">${safeName}</text>
-        <text x="80" y="490" font-size="27" font-family="Inter, Arial, sans-serif" fill="#475569">${user?.phoneNumber || ""}</text>
-        <text x="80" y="580" font-size="32" font-family="Inter, Arial, sans-serif" font-weight="600" fill="#334155">Sessions</text>
-        <text y="620" font-size="28" font-family="Inter, Arial, sans-serif" fill="#0F172A">
-          ${rows || '<tspan x="40" dy="28">No sessions selected.</tspan>'}
-        </text>
-      </svg>
-    `;
+    const bgGradient = ctx.createLinearGradient(0, 0, 1080, 1350);
+    bgGradient.addColorStop(0, "#EEF2FF");
+    bgGradient.addColorStop(1, "#ECFEFF");
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, 1080, 1350);
 
-    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-    const image = URL.createObjectURL(blob);
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = "#A5B4FC";
+    ctx.beginPath();
+    ctx.arc(170, 170, 220, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#67E8F9";
+    ctx.beginPath();
+    ctx.arc(930, 210, 260, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    const cardX = 48;
+    const cardY = 110;
+    const cardW = 984;
+    const cardH = 1120;
+    const radius = 24;
+
+    ctx.fillStyle = "rgba(255,255,255,0.97)";
+    ctx.beginPath();
+    ctx.moveTo(cardX + radius, cardY);
+    ctx.lineTo(cardX + cardW - radius, cardY);
+    ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + radius);
+    ctx.lineTo(cardX + cardW, cardY + cardH - radius);
+    ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - radius, cardY + cardH);
+    ctx.lineTo(cardX + radius, cardY + cardH);
+    ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - radius);
+    ctx.lineTo(cardX, cardY + radius);
+    ctx.quadraticCurveTo(cardX, cardY, cardX + radius, cardY);
+    ctx.closePath();
+    ctx.shadowColor = "rgba(15,23,42,0.16)";
+    ctx.shadowBlur = 32;
+    ctx.shadowOffsetY = 16;
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+
+    const contentX = 96;
+    let y = 210;
+
+    ctx.fillStyle = "#0F172A";
+    ctx.font = "700 58px Inter, Arial, sans-serif";
+    ctx.fillText("Event Confirmation", contentX, y);
+
+    y += 52;
+    ctx.fillStyle = "#475569";
+    ctx.font = "400 29px Inter, Arial, sans-serif";
+    ctx.fillText("Your appointment booking is confirmed.", contentX, y);
+
+    y += 48;
+    ctx.strokeStyle = "#CBD5E1";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(contentX, y);
+    ctx.lineTo(980, y);
+    ctx.stroke();
+
+    y += 66;
+    ctx.fillStyle = "#334155";
+    ctx.font = "600 34px Inter, Arial, sans-serif";
+    ctx.fillText("Participant", contentX, y);
+
+    y += 52;
+    ctx.fillStyle = "#0F172A";
+    ctx.font = "600 33px Inter, Arial, sans-serif";
+    ctx.fillText(safeName, contentX, y);
+
+    y += 44;
+    ctx.fillStyle = "#475569";
+    ctx.font = "400 28px Inter, Arial, sans-serif";
+    ctx.fillText(user?.phoneNumber || "", contentX, y);
+
+    y += 80;
+    ctx.fillStyle = "#334155";
+    ctx.font = "600 34px Inter, Arial, sans-serif";
+    ctx.fillText("Sessions (sorted by time)", contentX, y);
+
+    y += 26;
+    const orderedSessions = selectedSessionsByTime;
+    orderedSessions.forEach((session) => {
+      y += 52;
+      ctx.fillStyle = "#E2E8F0";
+      ctx.fillRect(contentX, y - 32, 22, 22);
+      ctx.fillStyle = "#0F172A";
+      ctx.font = "500 28px Inter, Arial, sans-serif";
+      ctx.fillText(
+        `${session.startTime}-${session.endTime}   |   ${session.roomName}`,
+        contentX + 40,
+        y - 12
+      );
+    });
+
+    if (!orderedSessions.length) {
+      y += 56;
+      ctx.fillStyle = "#64748B";
+      ctx.font = "400 28px Inter, Arial, sans-serif";
+      ctx.fillText("No sessions selected.", contentX, y);
+    }
+
+    const image = canvas.toDataURL("image/jpeg", 0.95);
     const link = document.createElement("a");
-    link.download = `appointment-confirmation-${user?.id || "user"}.svg`;
+    link.download = `appointment-confirmation-${user?.id || "user"}.jpg`;
     link.href = image;
     link.click();
-    URL.revokeObjectURL(image);
   }
 
   function exitToIntro() {
@@ -331,19 +416,27 @@ function App() {
     <ThemeProvider theme={theme}>
       <Box
         sx={{
-          minHeight: "100vh",
+          minHeight: "100dvh",
           background:
             "radial-gradient(circle at top left, #E0E7FF 0%, transparent 45%), radial-gradient(circle at bottom right, #CCFBF1 0%, transparent 40%), #F4F7FF",
-          py: 2
+          py: 1.5
         }}
       >
-        <Container maxWidth="sm" sx={{ py: 2 }}>
-          <Stack spacing={2}>
+        <Container
+          maxWidth="sm"
+          sx={{
+            minHeight: "100dvh",
+            py: 1.5,
+            display: "flex",
+            alignItems: shouldCenterCards ? "center" : "flex-start"
+          }}
+        >
+          <Stack spacing={2} sx={{ width: "100%" }}>
         <Paper
           elevation={0}
           sx={{
             p: 2.5,
-            borderRadius: 5,
+            borderRadius: 3,
             border: "1px solid",
             borderColor: alpha(theme.palette.primary.main, 0.14),
             backdropFilter: "blur(12px)",
@@ -378,7 +471,7 @@ function App() {
           elevation={0}
           sx={{
             p: 1.5,
-            borderRadius: 5,
+            borderRadius: 3,
             border: "1px solid",
             borderColor: alpha(theme.palette.primary.main, 0.1),
             background: alpha("#FFFFFF", 0.72),
@@ -410,7 +503,7 @@ function App() {
         {step === STEPS.intro && (
           <Card
             sx={{
-              borderRadius: 5,
+              borderRadius: 3,
               border: "1px solid",
               borderColor: alpha(theme.palette.primary.main, 0.14),
               background: alpha("#FFFFFF", 0.74),
@@ -418,7 +511,7 @@ function App() {
               boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
             }}
           >
-            <CardContent>
+            <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={2.5}>
                 <Typography variant="h5" fontWeight={700}>
                   Welcome
@@ -448,7 +541,7 @@ function App() {
         {step === STEPS.userInfo && (
           <Card
             sx={{
-              borderRadius: 5,
+              borderRadius: 3,
               border: "1px solid",
               borderColor: alpha(theme.palette.primary.main, 0.14),
               background: alpha("#FFFFFF", 0.74),
@@ -456,47 +549,41 @@ function App() {
               boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
             }}
           >
-            <CardContent>
+            <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
                   Personal Information
                 </Typography>
-                <Grid container spacing={1.5}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Name"
-                      value={userInfo.name}
-                      onChange={(event) =>
-                        setUserInfo((prev) => ({ ...prev, name: event.target.value }))
-                      }
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Last Name"
-                      value={userInfo.lastName}
-                      onChange={(event) =>
-                        setUserInfo((prev) => ({ ...prev, lastName: event.target.value }))
-                      }
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Age"
-                      type="number"
-                      value={userInfo.age}
-                      onChange={(event) =>
-                        setUserInfo((prev) => ({ ...prev, age: event.target.value }))
-                      }
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
-                    />
-                  </Grid>
-                </Grid>
+                <Stack spacing={1.5}>
+                  <TextField
+                    fullWidth
+                    label="Name"
+                    value={userInfo.name}
+                    onChange={(event) =>
+                      setUserInfo((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    value={userInfo.lastName}
+                    onChange={(event) =>
+                      setUserInfo((prev) => ({ ...prev, lastName: event.target.value }))
+                    }
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Age"
+                    type="number"
+                    value={userInfo.age}
+                    onChange={(event) =>
+                      setUserInfo((prev) => ({ ...prev, age: event.target.value }))
+                    }
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                  />
+                </Stack>
                 <Button
                   variant="contained"
                   size="large"
@@ -514,7 +601,7 @@ function App() {
         {step === STEPS.phone && (
           <Card
             sx={{
-              borderRadius: 5,
+              borderRadius: 3,
               border: "1px solid",
               borderColor: alpha(theme.palette.primary.main, 0.14),
               background: alpha("#FFFFFF", 0.74),
@@ -522,7 +609,7 @@ function App() {
               boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
             }}
           >
-            <CardContent>
+            <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
                   Phone Number
@@ -551,7 +638,7 @@ function App() {
         {step === STEPS.sessions && (
           <Card
             sx={{
-              borderRadius: 5,
+              borderRadius: 3,
               border: "1px solid",
               borderColor: alpha(theme.palette.primary.main, 0.14),
               background: alpha("#FFFFFF", 0.74),
@@ -559,7 +646,7 @@ function App() {
               boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
             }}
           >
-            <CardContent>
+            <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
                   Select Sessions
@@ -571,6 +658,7 @@ function App() {
                 <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
                   <Chip label={`Selected: ${selectedSessionIds.length} / 4`} color="primary" />
                   <Chip label="Unique room across all slots" variant="outlined" />
+                  <Chip label="All 4 slots required" variant="outlined" color="warning" />
                 </Stack>
                 {timeKeys.map((timeKey) => (
                   <Paper
@@ -578,7 +666,7 @@ function App() {
                     variant="outlined"
                     sx={{
                       p: 2,
-                      borderRadius: 4,
+                      borderRadius: 2,
                       borderColor: alpha(theme.palette.primary.main, 0.18),
                       background: alpha("#FFFFFF", 0.75)
                     }}
@@ -619,7 +707,7 @@ function App() {
                   size="large"
                   sx={{ py: 1.2, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                   onClick={submitReservations}
-                  disabled={loading}
+                  disabled={loading || selectedSessionIds.length < 4}
                 >
                   {loading ? "Saving..." : "Confirm Reservations"}
                 </Button>
@@ -631,7 +719,7 @@ function App() {
         {step === STEPS.confirm && (
           <Card
             sx={{
-              borderRadius: 5,
+              borderRadius: 3,
               border: "1px solid",
               borderColor: alpha(theme.palette.primary.main, 0.14),
               background: alpha("#FFFFFF", 0.74),
@@ -639,7 +727,7 @@ function App() {
               boxShadow: "0 20px 36px rgba(15, 23, 42, 0.09)"
             }}
           >
-            <CardContent>
+            <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={2.5}>
                 <Typography variant="h6" fontWeight={700}>
                   Confirmation
@@ -650,10 +738,10 @@ function App() {
                 <Typography>Phone: {user?.phoneNumber}</Typography>
                 <Divider />
                 <Typography variant="subtitle1">Booked Sessions</Typography>
-                {selectedSessions.map((session) => (
+                {selectedSessionsByTime.map((session) => (
                   <Chip
                     key={session.id}
-                    label={`${session.roomName} | ${session.startTime}-${session.endTime}`}
+                    label={`${session.startTime}-${session.endTime} | ${session.roomName}`}
                     variant="outlined"
                   />
                 ))}
