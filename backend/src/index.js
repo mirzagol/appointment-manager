@@ -9,6 +9,14 @@ const PORT = Number(process.env.PORT || 3000);
 const FRONTEND_DIST_PATH = path.join(__dirname, "../../frontend/dist");
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "admin";
+const WORKSHOP_NAMES = [
+  "Robotik Kodlama Atölyesi",
+  "Ahşap ve Marangozluk Atölyesi",
+  "Sanat ve El işi atölyesi",
+  "Müzik ve Ritim Atölyesi",
+  "Minik Şefler Atölyesi",
+  "Hareket ve Oyun Atölyesi"
+];
 
 app.use(cors());
 app.use(express.json());
@@ -136,18 +144,18 @@ app.post("/users", async (req, res) => {
     const { name, lastName, age, phoneNumber } = req.body;
     if (!name || !lastName || !age || !phoneNumber) {
       return res.status(400).json({
-        error: "name, lastName, age, and phoneNumber are required."
+        error: "Ad, soyad, yas ve telefon numarasi zorunludur."
       });
     }
 
     const parsedAge = Number(age);
     if (!Number.isInteger(parsedAge) || parsedAge <= 0) {
-      return res.status(400).json({ error: "age must be a positive integer." });
+      return res.status(400).json({ error: "Yas pozitif bir tam sayi olmalidir." });
     }
 
     const normalizedPhoneNumber = String(phoneNumber).trim();
     if (normalizedPhoneNumber.length < 7) {
-      return res.status(400).json({ error: "phoneNumber is invalid." });
+      return res.status(400).json({ error: "Telefon numarasi gecersiz." });
     }
 
     const user = await prisma.user.create({
@@ -165,9 +173,9 @@ app.post("/users", async (req, res) => {
     if (error.code === "P2002") {
       return res
         .status(409)
-        .json({ error: "This phone number is already registered." });
+        .json({ error: "Bu telefon numarasi ile kayit zaten var." });
     }
-    return res.status(500).json({ error: "Failed to create user." });
+    return res.status(500).json({ error: "Kullanici olusturulamadi." });
   }
 });
 
@@ -176,7 +184,7 @@ app.post("/reservations", async (req, res) => {
   if (!userId || !sessionId) {
     return res
       .status(400)
-      .json({ error: "userId and sessionId are required for booking." });
+      .json({ error: "Rezervasyon icin userId ve sessionId zorunludur." });
   }
 
   try {
@@ -253,32 +261,32 @@ app.post("/reservations", async (req, res) => {
   } catch (error) {
     console.error("POST /reservations error:", error);
     if (error.message === "USER_NOT_FOUND") {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: "Kullanici bulunamadi." });
     }
     if (error.message === "SESSION_NOT_FOUND") {
-      return res.status(404).json({ error: "Session not found." });
+      return res.status(404).json({ error: "Oturum bulunamadi." });
     }
     if (error.message === "ALREADY_BOOKED_IN_ROOM") {
       return res.status(409).json({
-        error: "User can only register for one session per room."
+        error: "Bir kullanici ayni atolyeden yalnizca bir oturum secebilir."
       });
     }
     if (error.message === "MAX_ROOMS_REACHED") {
       return res.status(409).json({
-        error: "User cannot book more than 4 rooms."
+        error: "Bir kullanici en fazla 4 atolye secebilir."
       });
     }
     if (error.message === "SESSION_FULL") {
       return res.status(409).json({
-        error: "This session is currently full."
+        error: "Bu oturum doludur."
       });
     }
     if (error.code === "P2002") {
       return res.status(409).json({
-        error: "This reservation already exists."
+        error: "Bu rezervasyon zaten mevcut."
       });
     }
-    return res.status(500).json({ error: "Failed to create reservation." });
+    return res.status(500).json({ error: "Rezervasyon olusturulamadi." });
   }
 });
 
@@ -288,7 +296,7 @@ app.get("/sessions", async (_req, res) => {
     return res.json({ sessions });
   } catch (error) {
     console.error("GET /sessions error:", error);
-    return res.status(500).json({ error: "Failed to load sessions." });
+    return res.status(500).json({ error: "Oturumlar yuklenemedi." });
   }
 });
 
@@ -299,7 +307,7 @@ app.get("/users/:id/reservations", async (req, res) => {
       where: { id: userId }
     });
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: "Kullanici bulunamadi." });
     }
 
     const reservations = await prisma.reservation.findMany({
@@ -319,7 +327,7 @@ app.get("/users/:id/reservations", async (req, res) => {
     return res.json({ user, reservations });
   } catch (error) {
     console.error("GET /users/:id/reservations error:", error);
-    return res.status(500).json({ error: "Failed to load reservations." });
+    return res.status(500).json({ error: "Rezervasyonlar yuklenemedi." });
   }
 });
 
@@ -361,8 +369,7 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
       return normalized;
     });
 
-    const roomNames = ["Room 1", "Room 2", "Room 3", "Room 4", "Room 5", "Room 6"];
-    const roomSessionForms = roomNames.map((roomName) => {
+    const roomSessionForms = WORKSHOP_NAMES.map((roomName) => {
       const sessionBuckets = {};
       for (const slot of timeSlots) {
         sessionBuckets[slot] = reservations
@@ -414,7 +421,7 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
     });
   } catch (error) {
     console.error("GET /admin/reports error:", error);
-    return res.status(500).json({ error: "Failed to generate admin reports." });
+    return res.status(500).json({ error: "Admin raporlari olusturulamadi." });
   }
 });
 

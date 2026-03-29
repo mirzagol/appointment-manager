@@ -53,7 +53,7 @@ function AdminPage() {
   async function loginAndLoadReports() {
     setError("");
     if (username !== "admin" || password !== "admin") {
-      setError("Invalid credentials.");
+      setError("Gecersiz giris bilgisi.");
       return;
     }
     setLoading(true);
@@ -66,7 +66,7 @@ function AdminPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to login.");
+        throw new Error(data.error || "Giris yapilamadi.");
       }
       setAuthHeader(`Basic ${encoded}`);
       setPeopleBySession(data.peopleBySession || []);
@@ -89,16 +89,17 @@ function AdminPage() {
             <CardContent>
               <Stack spacing={1.5}>
                 <Typography variant="h5" fontWeight={700}>
-                  Admin Reports
+                  Admin Raporlari
                 </Typography>
                 <Typography color="text.secondary">
-                  URL-only page for CSV exports.
+                  CSV disa aktarimi icin yonetici paneli.
                 </Typography>
                 {error && <Alert severity="error">{error}</Alert>}
                 {!isLoggedIn && (
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                     <TextField
                       label="Username"
+                      placeholder="admin"
                       value={username}
                       onChange={(event) => setUsername(event.target.value)}
                     />
@@ -113,7 +114,7 @@ function AdminPage() {
                       onClick={loginAndLoadReports}
                       disabled={!username || !password || loading}
                     >
-                      {loading ? "Loading..." : "Login"}
+                      {loading ? "Yukleniyor..." : "Giris"}
                     </Button>
                   </Stack>
                 )}
@@ -132,14 +133,14 @@ function AdminPage() {
                       alignItems={{ xs: "flex-start", sm: "center" }}
                       spacing={1}
                     >
-                      <Typography variant="h6">People with Selected Rooms by Session</Typography>
+                      <Typography variant="h6">Katilimcilar ve Saatlere Gore Atolye Secimleri</Typography>
                       <Button
                         variant="outlined"
                         onClick={() =>
                           downloadCsv("people-by-session.csv", csvPayload.peopleBySession)
                         }
                       >
-                        Export CSV
+                        CSV Indir
                       </Button>
                     </Stack>
                     <TableContainer>
@@ -176,7 +177,7 @@ function AdminPage() {
                         alignItems={{ xs: "flex-start", sm: "center" }}
                         spacing={1}
                       >
-                        <Typography variant="h6">{form.room} - People Per Session</Typography>
+                        <Typography variant="h6">{form.room} - Saatlere Gore Katilimcilar</Typography>
                         <Button
                           variant="outlined"
                           onClick={() =>
@@ -186,14 +187,14 @@ function AdminPage() {
                             )
                           }
                         >
-                          Export CSV
+                          CSV Indir
                         </Button>
                       </Stack>
                       <TableContainer>
                         <Table size="small">
                           <TableHead>
                             <TableRow>
-                              <TableCell>Attendee #</TableCell>
+                              <TableCell>Katilimci #</TableCell>
                               {form.timeSlots.map((slot) => (
                                 <TableCell key={slot}>{slot}</TableCell>
                               ))}
@@ -223,7 +224,7 @@ function AdminPage() {
                     alignItems={{ xs: "flex-start", sm: "center" }}
                     spacing={1}
                   >
-                    <Typography variant="h6">All Room Session Forms (Single CSV)</Typography>
+                    <Typography variant="h6">Tum Atolyeler (Tek CSV)</Typography>
                     <Button
                       variant="contained"
                       onClick={() =>
@@ -233,7 +234,7 @@ function AdminPage() {
                         )
                       }
                     >
-                      Export All CSV
+                      Tumunu CSV Olarak Indir
                     </Button>
                   </Stack>
                 </CardContent>

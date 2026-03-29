@@ -129,7 +129,7 @@ function App() {
       const response = await fetch(`${API_BASE}/sessions`);
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Could not load sessions.");
+        throw new Error(data.error || "Oturumlar yuklenemedi.");
       }
       setSessions(data.sessions);
     } catch (fetchError) {
@@ -154,10 +154,10 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "User registration failed.");
+        throw new Error(data.error || "Kullanici kaydi basarisiz.");
       }
       setUser(data);
-      setSuccess("User registered successfully.");
+      setSuccess("Kayit basariyla tamamlandi.");
       setStep(STEPS.sessions);
     } catch (createError) {
       setError(createError.message);
@@ -170,9 +170,9 @@ function App() {
     const byId = new Map(sessions.map((session) => [session.id, session]));
     let updatedSelectionIds = [...selectedSessionIds];
     const reasonMessage = {
-      room: "Selection updated: replaced your previous choice for this room.",
-      time: "Selection updated: replaced your previous choice in this time slot.",
-      max: "Selection updated: replaced your earliest pick to keep 4 selections."
+      room: "Ayni atolye secimi guncellendi.",
+      time: "Ayni saatteki onceki seciminiz guncellendi.",
+      max: "4 secim siniri nedeniyle en eski secim degistirildi."
     };
 
     if (reason === "room") {
@@ -237,15 +237,15 @@ function App() {
 
   async function submitReservations() {
     if (!user) {
-      setError("User registration is required.");
+      setError("Once kayit olmalisiniz.");
       return;
     }
     if (selectedSessionIds.length === 0) {
-      setError("Select at least one session.");
+      setError("En az bir oturum seciniz.");
       return;
     }
     if (selectedSessionIds.length < 4) {
-      setError("You must select all 4 time slots before confirming.");
+      setError("Lutfen 4 saat diliminin tamamini seciniz.");
       return;
     }
 
@@ -265,11 +265,11 @@ function App() {
         });
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.error || "Booking failed.");
+          throw new Error(data.error || "Rezervasyon basarisiz.");
         }
       }
 
-      setSuccess("Reservations completed.");
+      setSuccess("Rezervasyonlar tamamlandi.");
       setStep(STEPS.confirm);
     } catch (reservationError) {
       setError(reservationError.message);
@@ -288,7 +288,7 @@ function App() {
       return;
     }
 
-    const safeName = `${user?.name || ""} ${user?.lastName || ""}`.trim() || "Guest";
+    const safeName = `${user?.name || ""} ${user?.lastName || ""}`.trim() || "Misafir";
 
     const bgGradient = ctx.createLinearGradient(0, 0, 1080, 1350);
     bgGradient.addColorStop(0, "#EEF2FF");
@@ -336,12 +336,12 @@ function App() {
 
     ctx.fillStyle = "#0F172A";
     ctx.font = "700 58px Inter, Arial, sans-serif";
-    ctx.fillText("Event Confirmation", contentX, y);
+    ctx.fillText("Atolye Onayi", contentX, y);
 
     y += 52;
     ctx.fillStyle = "#475569";
     ctx.font = "400 29px Inter, Arial, sans-serif";
-    ctx.fillText("Your appointment booking is confirmed.", contentX, y);
+    ctx.fillText("Randevu secimleriniz basariyla alindi.", contentX, y);
 
     y += 48;
     ctx.strokeStyle = "#CBD5E1";
@@ -354,7 +354,7 @@ function App() {
     y += 66;
     ctx.fillStyle = "#334155";
     ctx.font = "600 34px Inter, Arial, sans-serif";
-    ctx.fillText("Participant", contentX, y);
+    ctx.fillText("Katilimci", contentX, y);
 
     y += 52;
     ctx.fillStyle = "#0F172A";
@@ -369,7 +369,7 @@ function App() {
     y += 80;
     ctx.fillStyle = "#334155";
     ctx.font = "600 34px Inter, Arial, sans-serif";
-    ctx.fillText("Sessions (sorted by time)", contentX, y);
+    ctx.fillText("Oturumlar (saate gore)", contentX, y);
 
     y += 26;
     const orderedSessions = selectedSessionsByTime;
@@ -390,7 +390,7 @@ function App() {
       y += 56;
       ctx.fillStyle = "#64748B";
       ctx.font = "400 28px Inter, Arial, sans-serif";
-      ctx.fillText("No sessions selected.", contentX, y);
+      ctx.fillText("Secili oturum yok.", contentX, y);
     }
 
     const image = canvas.toDataURL("image/jpeg", 0.95);
@@ -458,10 +458,10 @@ function App() {
             </Avatar>
             <Box>
               <Typography variant="h5" fontWeight={800}>
-                Event Appointment Manager
+                Bil Koleji Florya 23 Nisan Atolye Sistemi
               </Typography>
               <Typography color="text.secondary" fontSize={14}>
-                Phone-first booking for your one-day event.
+                23 Nisan etkinligi icin atolye secim platformu.
               </Typography>
             </Box>
           </Stack>
@@ -480,19 +480,19 @@ function App() {
         >
           <Stepper activeStep={activeStep} alternativeLabel>
             <Step>
-              <StepLabel>Welcome</StepLabel>
+              <StepLabel>Hos Geldiniz</StepLabel>
             </Step>
             <Step>
-              <StepLabel>Profile</StepLabel>
+              <StepLabel>Bilgiler</StepLabel>
             </Step>
             <Step>
-              <StepLabel>Phone</StepLabel>
+              <StepLabel>Telefon</StepLabel>
             </Step>
             <Step>
-              <StepLabel>Sessions</StepLabel>
+              <StepLabel>Oturumlar</StepLabel>
             </Step>
             <Step>
-              <StepLabel>Confirm</StepLabel>
+              <StepLabel>Onay</StepLabel>
             </Step>
           </Stepper>
         </Paper>
@@ -514,16 +514,21 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={2.5}>
                 <Typography variant="h5" fontWeight={700}>
-                  Welcome
+                  Hos Geldiniz
                 </Typography>
                 <Typography color="text.secondary">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Please
-                  complete your information and choose your preferred sessions.
+                  Sayin misafirimiz, Bil Koleji Florya'nin 23 Nisan Cocuk Bayrami
+                  etkinligine hos geldiniz.
+                  <br />
+                  <br />
+                  Atolyelerimiz saat 11.30 ile 13.30 arasinda gerceklestirilecektir.
+                  <br />
+                  6 atolye arasindan 4 tanesini secebilirsiniz.
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
-                  <Chip label="6 Rooms" color="primary" />
-                  <Chip label="4 Time Slots" color="secondary" />
-                  <Chip label="Max 4 Selections" />
+                  <Chip label="6 Atolye" color="primary" />
+                  <Chip label="4 Saat Dilimi" color="secondary" />
+                  <Chip label="4 Secim Hakki" />
                 </Stack>
                 <Button
                   variant="contained"
@@ -531,7 +536,7 @@ function App() {
                   sx={{ py: 1.2, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                   onClick={() => setStep(STEPS.userInfo)}
                 >
-                  Start Registration
+                  Kayda Basla
                 </Button>
               </Stack>
             </CardContent>
@@ -552,12 +557,12 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
-                  Personal Information
+                  Kisisel Bilgiler
                 </Typography>
                 <Stack spacing={1.5}>
                   <TextField
                     fullWidth
-                    label="Name"
+                    label="Ad"
                     value={userInfo.name}
                     onChange={(event) =>
                       setUserInfo((prev) => ({ ...prev, name: event.target.value }))
@@ -566,7 +571,7 @@ function App() {
                   />
                   <TextField
                     fullWidth
-                    label="Last Name"
+                    label="Soyad"
                     value={userInfo.lastName}
                     onChange={(event) =>
                       setUserInfo((prev) => ({ ...prev, lastName: event.target.value }))
@@ -575,7 +580,7 @@ function App() {
                   />
                   <TextField
                     fullWidth
-                    label="Age"
+                    label="Yas"
                     type="number"
                     value={userInfo.age}
                     onChange={(event) =>
@@ -591,7 +596,7 @@ function App() {
                   onClick={() => setStep(STEPS.phone)}
                   disabled={!userInfo.name || !userInfo.lastName || !userInfo.age}
                 >
-                  Continue
+                  Devam Et
                 </Button>
               </Stack>
             </CardContent>
@@ -612,10 +617,10 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
-                  Phone Number
+                  Telefon Numarasi
                 </Typography>
                 <TextField
-                  label="Phone Number"
+                  label="Telefon Numarasi"
                   fullWidth
                   value={phoneNumber}
                   onChange={(event) => setPhoneNumber(event.target.value)}
@@ -628,7 +633,7 @@ function App() {
                   onClick={createUser}
                   disabled={!phoneNumber || loading}
                 >
-                  {loading ? "Registering..." : "Create User"}
+                  {loading ? "Kaydediliyor..." : "Kaydi Tamamla"}
                 </Button>
               </Stack>
             </CardContent>
@@ -649,16 +654,16 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
-                  Select Sessions
+                  Oturum Secimi
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Pick up to 4 sessions. Each room can only be selected once overall.
-                  When a room is selected in one slot, that room is disabled in all others.
+                  4 oturum secmeniz zorunludur. Her atolyeden sadece bir kez
+                  secim yapabilirsiniz.
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
-                  <Chip label={`Selected: ${selectedSessionIds.length} / 4`} color="primary" />
-                  <Chip label="Unique room across all slots" variant="outlined" />
-                  <Chip label="All 4 slots required" variant="outlined" color="warning" />
+                  <Chip label={`Secilen: ${selectedSessionIds.length} / 4`} color="primary" />
+                  <Chip label="Her atolye tek secim" variant="outlined" />
+                  <Chip label="4 oturum zorunlu" variant="outlined" color="warning" />
                 </Stack>
                 {timeKeys.map((timeKey) => (
                   <Paper
@@ -694,7 +699,7 @@ function App() {
                                 borderRadius: 3
                               }}
                             >
-                              {session.roomName} - {session.availableSpots} left
+                              {session.roomName} - {session.availableSpots} bos
                             </Button>
                           </Grid>
                         );
@@ -709,7 +714,7 @@ function App() {
                   onClick={submitReservations}
                   disabled={loading || selectedSessionIds.length < 4}
                 >
-                  {loading ? "Saving..." : "Confirm Reservations"}
+                  {loading ? "Kaydediliyor..." : "Rezervasyonu Onayla"}
                 </Button>
               </Stack>
             </CardContent>
@@ -730,14 +735,14 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={2.5}>
                 <Typography variant="h6" fontWeight={700}>
-                  Confirmation
+                  Onay
                 </Typography>
                 <Typography>
-                  Name: {user?.name} {user?.lastName}
+                  Ad Soyad: {user?.name} {user?.lastName}
                 </Typography>
-                <Typography>Phone: {user?.phoneNumber}</Typography>
+                <Typography>Telefon: {user?.phoneNumber}</Typography>
                 <Divider />
-                <Typography variant="subtitle1">Booked Sessions</Typography>
+                <Typography variant="subtitle1">Secilen Oturumlar</Typography>
                 {selectedSessionsByTime.map((session) => (
                   <Chip
                     key={session.id}
@@ -751,10 +756,10 @@ function App() {
                     sx={{ py: 1.1, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                     onClick={saveAsImage}
                   >
-                    Download Confirmation
+                    Onayi JPG Olarak Indir
                   </Button>
                   <Button variant="outlined" color="inherit" onClick={exitToIntro}>
-                    Exit
+                    Cikis
                   </Button>
                 </Stack>
               </Stack>

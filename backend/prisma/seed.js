@@ -2,7 +2,14 @@ const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
-const ROOMS = Array.from({ length: 6 }, (_, index) => `Room ${index + 1}`);
+const ROOMS = [
+  "Robotik Kodlama Atölyesi",
+  "Ahşap ve Marangozluk Atölyesi",
+  "Sanat ve El işi atölyesi",
+  "Müzik ve Ritim Atölyesi",
+  "Minik Şefler Atölyesi",
+  "Hareket ve Oyun Atölyesi"
+];
 const TIME_SLOTS = [
   { startTime: "11:30", endTime: "12:00" },
   { startTime: "12:00", endTime: "12:30" },
@@ -11,6 +18,21 @@ const TIME_SLOTS = [
 ];
 
 async function main() {
+  const existingRooms = await prisma.room.findMany({
+    orderBy: { id: "asc" }
+  });
+
+  for (let index = 0; index < Math.min(existingRooms.length, ROOMS.length); index += 1) {
+    const room = existingRooms[index];
+    const targetName = ROOMS[index];
+    if (room.name !== targetName) {
+      await prisma.room.update({
+        where: { id: room.id },
+        data: { name: targetName }
+      });
+    }
+  }
+
   for (const roomName of ROOMS) {
     await prisma.room.upsert({
       where: { name: roomName },
@@ -19,7 +41,13 @@ async function main() {
     });
   }
 
-  const rooms = await prisma.room.findMany();
+  const rooms = await prisma.room.findMany({
+    where: {
+      name: {
+        in: ROOMS
+      }
+    }
+  });
   for (const room of rooms) {
     for (const slot of TIME_SLOTS) {
       await prisma.session.upsert({
