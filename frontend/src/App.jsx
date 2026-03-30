@@ -129,7 +129,7 @@ function App() {
       const response = await fetch(`${API_BASE}/sessions`);
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Oturumlar yuklenemedi.");
+        throw new Error(data.error || "Oturumlar yüklenemedi.");
       }
       setSessions(data.sessions);
     } catch (fetchError) {
@@ -154,10 +154,10 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Kullanici kaydi basarisiz.");
+        throw new Error(data.error || "Kullanıcı kaydı başarısız.");
       }
       setUser(data);
-      setSuccess("Kayit basariyla tamamlandi.");
+      setSuccess("Kayıt başarıyla tamamlandı.");
       setStep(STEPS.sessions);
     } catch (createError) {
       setError(createError.message);
@@ -170,9 +170,9 @@ function App() {
     const byId = new Map(sessions.map((session) => [session.id, session]));
     let updatedSelectionIds = [...selectedSessionIds];
     const reasonMessage = {
-      room: "Ayni atolye secimi guncellendi.",
-      time: "Ayni saatteki onceki seciminiz guncellendi.",
-      max: "4 secim siniri nedeniyle en eski secim degistirildi."
+      room: "Aynı atölye seçimi güncellendi.",
+      time: "Aynı saatteki önceki seçiminiz güncellendi.",
+      max: "4 seçim sınırı nedeniyle en eski seçim değiştirildi."
     };
 
     if (reason === "room") {
@@ -237,15 +237,15 @@ function App() {
 
   async function submitReservations() {
     if (!user) {
-      setError("Once kayit olmalisiniz.");
+      setError("Önce kayıt olmalısınız.");
       return;
     }
     if (selectedSessionIds.length === 0) {
-      setError("En az bir oturum seciniz.");
+      setError("En az bir oturum seçiniz.");
       return;
     }
     if (selectedSessionIds.length < 4) {
-      setError("Lutfen 4 saat diliminin tamamini seciniz.");
+      setError("Lütfen 4 saat diliminin tamamını seçiniz.");
       return;
     }
 
@@ -265,11 +265,11 @@ function App() {
         });
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.error || "Rezervasyon basarisiz.");
+          throw new Error(data.error || "Rezervasyon başarısız.");
         }
       }
 
-      setSuccess("Rezervasyonlar tamamlandi.");
+      setSuccess("Rezervasyonlar tamamlandı.");
       setStep(STEPS.confirm);
     } catch (reservationError) {
       setError(reservationError.message);
@@ -336,12 +336,12 @@ function App() {
 
     ctx.fillStyle = "#0F172A";
     ctx.font = "700 58px Inter, Arial, sans-serif";
-    ctx.fillText("Atolye Onayi", contentX, y);
+    ctx.fillText("Atölye Onayı", contentX, y);
 
     y += 52;
     ctx.fillStyle = "#475569";
     ctx.font = "400 29px Inter, Arial, sans-serif";
-    ctx.fillText("Randevu secimleriniz basariyla alindi.", contentX, y);
+    ctx.fillText("Randevu seçimleriniz başarıyla alındı.", contentX, y);
 
     y += 48;
     ctx.strokeStyle = "#CBD5E1";
@@ -354,7 +354,7 @@ function App() {
     y += 66;
     ctx.fillStyle = "#334155";
     ctx.font = "600 34px Inter, Arial, sans-serif";
-    ctx.fillText("Katilimci", contentX, y);
+    ctx.fillText("Katılımcı", contentX, y);
 
     y += 52;
     ctx.fillStyle = "#0F172A";
@@ -369,7 +369,7 @@ function App() {
     y += 80;
     ctx.fillStyle = "#334155";
     ctx.font = "600 34px Inter, Arial, sans-serif";
-    ctx.fillText("Oturumlar (saate gore)", contentX, y);
+    ctx.fillText("Oturumlar (saate göre)", contentX, y);
 
     y += 26;
     const orderedSessions = selectedSessionsByTime;
@@ -390,12 +390,12 @@ function App() {
       y += 56;
       ctx.fillStyle = "#64748B";
       ctx.font = "400 28px Inter, Arial, sans-serif";
-      ctx.fillText("Secili oturum yok.", contentX, y);
+      ctx.fillText("Seçili oturum yok.", contentX, y);
     }
 
     const image = canvas.toDataURL("image/jpeg", 0.95);
     const link = document.createElement("a");
-    link.download = `appointment-confirmation-${user?.id || "user"}.jpg`;
+    link.download = `atolye-onayi-${user?.id || "kullanici"}.jpg`;
     link.href = image;
     link.click();
   }
@@ -423,7 +423,7 @@ function App() {
         }}
       >
         <Container
-          maxWidth="sm"
+          maxWidth="lg"
           sx={{
             minHeight: "100dvh",
             py: 1.5,
@@ -445,7 +445,11 @@ function App() {
             boxShadow: "0 18px 36px rgba(30, 41, 59, 0.10)"
           }}
         >
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1.5}
+            alignItems={{ xs: "flex-start", sm: "center" }}
+          >
             <Avatar
               sx={{
                 bgcolor: "primary.main",
@@ -456,12 +460,12 @@ function App() {
             >
               EV
             </Avatar>
-            <Box>
-              <Typography variant="h5" fontWeight={800}>
-                Bil Koleji Florya 23 Nisan Atolye Sistemi
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                Bil Koleji Florya 23 Nisan Atölye Sistemi
               </Typography>
               <Typography color="text.secondary" fontSize={14}>
-                23 Nisan etkinligi icin atolye secim platformu.
+                23 Nisan etkinliği için atölye seçim platformu.
               </Typography>
             </Box>
           </Stack>
@@ -480,7 +484,7 @@ function App() {
         >
           <Stepper activeStep={activeStep} alternativeLabel>
             <Step>
-              <StepLabel>Hos Geldiniz</StepLabel>
+              <StepLabel>Hoş Geldiniz</StepLabel>
             </Step>
             <Step>
               <StepLabel>Bilgiler</StepLabel>
@@ -514,21 +518,21 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={2.5}>
                 <Typography variant="h5" fontWeight={700}>
-                  Hos Geldiniz
+                  Hoş Geldiniz
                 </Typography>
                 <Typography color="text.secondary">
-                  Sayin misafirimiz, Bil Koleji Florya'nin 23 Nisan Cocuk Bayrami
-                  etkinligine hos geldiniz.
+                  Sayın misafirimiz, Bil Koleji Florya&apos;nın 23 Nisan Çocuk Bayramı
+                  etkinliğine hoş geldiniz.
                   <br />
                   <br />
-                  Atolyelerimiz saat 11.30 ile 13.30 arasinda gerceklestirilecektir.
+                  Atölyelerimiz saat 11.30 ile 13.30 arasında gerçekleştirilecektir.
                   <br />
-                  6 atolye arasindan 4 tanesini secebilirsiniz.
+                  6 atölye arasından 4 tanesini seçebilirsiniz.
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
-                  <Chip label="6 Atolye" color="primary" />
+                  <Chip label="6 Atölye" color="primary" />
                   <Chip label="4 Saat Dilimi" color="secondary" />
-                  <Chip label="4 Secim Hakki" />
+                  <Chip label="4 Seçim Hakkı" />
                 </Stack>
                 <Button
                   variant="contained"
@@ -536,7 +540,7 @@ function App() {
                   sx={{ py: 1.2, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                   onClick={() => setStep(STEPS.userInfo)}
                 >
-                  Kayda Basla
+                  Kayda Başla
                 </Button>
               </Stack>
             </CardContent>
@@ -557,7 +561,7 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
-                  Kisisel Bilgiler
+                  Kişisel Bilgiler
                 </Typography>
                 <Stack spacing={1.5}>
                   <TextField
@@ -580,7 +584,7 @@ function App() {
                   />
                   <TextField
                     fullWidth
-                    label="Yas"
+                    label="Yaş"
                     type="number"
                     value={userInfo.age}
                     onChange={(event) =>
@@ -617,10 +621,10 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
-                  Telefon Numarasi
+                  Telefon Numarası
                 </Typography>
                 <TextField
-                  label="Telefon Numarasi"
+                  label="Telefon Numarası"
                   fullWidth
                   value={phoneNumber}
                   onChange={(event) => setPhoneNumber(event.target.value)}
@@ -633,7 +637,7 @@ function App() {
                   onClick={createUser}
                   disabled={!phoneNumber || loading}
                 >
-                  {loading ? "Kaydediliyor..." : "Kaydi Tamamla"}
+                  {loading ? "Kaydediliyor..." : "Kaydı Tamamla"}
                 </Button>
               </Stack>
             </CardContent>
@@ -654,16 +658,42 @@ function App() {
             <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
               <Stack spacing={3}>
                 <Typography variant="h6" fontWeight={700}>
-                  Oturum Secimi
+                  Atölye Seçimi
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  4 oturum secmeniz zorunludur. Her atolyeden sadece bir kez
-                  secim yapabilirsiniz.
+                  4 oturum seçmeniz zorunludur. Her atölyeden yalnızca bir kez
+                  seçim yapabilirsiniz.
                 </Typography>
-                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
-                  <Chip label={`Secilen: ${selectedSessionIds.length} / 4`} color="primary" />
-                  <Chip label="Her atolye tek secim" variant="outlined" />
-                  <Chip label="4 oturum zorunlu" variant="outlined" color="warning" />
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  sx={{ width: "100%", alignItems: { xs: "stretch", sm: "center" } }}
+                >
+                  <Chip
+                    label={`Seçilen: ${selectedSessionIds.length} / 4`}
+                    color="primary"
+                    sx={{
+                      width: { xs: "100%", sm: "auto" },
+                      "& .MuiChip-label": { width: "100%", textAlign: "center" }
+                    }}
+                  />
+                  <Chip
+                    label="Her atölyeden tek seçim"
+                    variant="outlined"
+                    sx={{
+                      width: { xs: "100%", sm: "auto" },
+                      "& .MuiChip-label": { width: "100%", textAlign: "center" }
+                    }}
+                  />
+                  <Chip
+                    label="4 oturum zorunlu"
+                    variant="outlined"
+                    color="warning"
+                    sx={{
+                      width: { xs: "100%", sm: "auto" },
+                      "& .MuiChip-label": { width: "100%", textAlign: "center" }
+                    }}
+                  />
                 </Stack>
                 {timeKeys.map((timeKey) => (
                   <Paper
@@ -686,7 +716,7 @@ function App() {
                           selectedRoomIds.has(session.roomId) && !selected;
                         const disabled = (session.isFull && !selected) || roomTakenElsewhere;
                         return (
-                          <Grid item xs={12} sm={6} key={session.id}>
+                          <Grid item xs={12} md={6} key={session.id}>
                             <Button
                               fullWidth
                               variant={selected ? "contained" : "outlined"}
@@ -694,12 +724,52 @@ function App() {
                               onClick={() => toggleSession(session)}
                               disabled={disabled || loading}
                               sx={{
-                                py: 1.2,
-                                justifyContent: "space-between",
-                                borderRadius: 3
+                                px: 2,
+                                py: 1.5,
+                                borderRadius: 3,
+                                textAlign: "left"
                               }}
                             >
-                              {session.roomName} - {session.availableSpots} bos
+                              <Stack
+                                direction="row"
+                                spacing={1.5}
+                                alignItems="center"
+                                justifyContent="space-between"
+                                sx={{ width: "100%", minWidth: 0 }}
+                              >
+                                <Box sx={{ minWidth: 0, flex: 1 }}>
+                                  <Typography
+                                    component="span"
+                                    sx={{
+                                      display: "block",
+                                      fontWeight: 700,
+                                      lineHeight: 1.35,
+                                      whiteSpace: "normal",
+                                      pr: 1
+                                    }}
+                                  >
+                                    {session.roomName}
+                                  </Typography>
+                                  <Typography
+                                    component="span"
+                                    variant="body2"
+                                    sx={{ display: "block", mt: 0.5, opacity: 0.9 }}
+                                  >
+                                    {selected
+                                      ? "Seçildi"
+                                      : session.isFull
+                                        ? "Kontenjan dolu"
+                                        : "Uygun oturum"}
+                                  </Typography>
+                                </Box>
+                                <Chip
+                                  size="small"
+                                  label={session.isFull ? "Dolu" : `${session.availableSpots} boş`}
+                                  color={session.isFull ? "error" : selected ? "secondary" : "default"}
+                                  variant={selected ? "filled" : "outlined"}
+                                  sx={{ flexShrink: 0 }}
+                                />
+                              </Stack>
                             </Button>
                           </Grid>
                         );
@@ -742,12 +812,20 @@ function App() {
                 </Typography>
                 <Typography>Telefon: {user?.phoneNumber}</Typography>
                 <Divider />
-                <Typography variant="subtitle1">Secilen Oturumlar</Typography>
+                <Typography variant="subtitle1">Seçilen Oturumlar</Typography>
                 {selectedSessionsByTime.map((session) => (
                   <Chip
                     key={session.id}
                     label={`${session.startTime}-${session.endTime} | ${session.roomName}`}
                     variant="outlined"
+                    sx={{
+                      height: "auto",
+                      "& .MuiChip-label": {
+                        display: "block",
+                        whiteSpace: "normal",
+                        py: 0.75
+                      }
+                    }}
                   />
                 ))}
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
@@ -756,10 +834,10 @@ function App() {
                     sx={{ py: 1.1, boxShadow: "0 10px 20px rgba(91, 91, 214, 0.4)" }}
                     onClick={saveAsImage}
                   >
-                    Onayi JPG Olarak Indir
+                    Onayı JPG Olarak İndir
                   </Button>
                   <Button variant="outlined" color="inherit" onClick={exitToIntro}>
-                    Cikis
+                    Çıkış
                   </Button>
                 </Stack>
               </Stack>

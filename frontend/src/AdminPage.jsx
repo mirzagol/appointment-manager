@@ -32,7 +32,7 @@ function downloadCsv(filename, content) {
 function AdminPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [authHeader, setAuthHeader] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [peopleBySession, setPeopleBySession] = useState([]);
@@ -42,8 +42,6 @@ function AdminPage() {
     roomSessionForms: {},
     roomSessionFormsAll: ""
   });
-
-  const isLoggedIn = Boolean(authHeader);
   const peopleColumns = useMemo(() => {
     if (!peopleBySession.length) {
       return [];
@@ -52,10 +50,6 @@ function AdminPage() {
   }, [peopleBySession]);
   async function loginAndLoadReports() {
     setError("");
-    if (username !== "admin" || password !== "admin") {
-      setError("Gecersiz giris bilgisi.");
-      return;
-    }
     setLoading(true);
     try {
       const encoded = btoa(`${username}:${password}`);
@@ -66,15 +60,19 @@ function AdminPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Giris yapilamadi.");
+        throw new Error(data.error || "Giriş yapılamadı.");
       }
-      setAuthHeader(`Basic ${encoded}`);
+      setIsLoggedIn(true);
       setPeopleBySession(data.peopleBySession || []);
       setRoomSessionForms(data.roomSessionForms || []);
       setCsvPayload(
         data.csv || { peopleBySession: "", roomSessionForms: {}, roomSessionFormsAll: "" }
       );
     } catch (fetchError) {
+      setIsLoggedIn(false);
+      setPeopleBySession([]);
+      setRoomSessionForms([]);
+      setCsvPayload({ peopleBySession: "", roomSessionForms: {}, roomSessionFormsAll: "" });
       setError(fetchError.message);
     } finally {
       setLoading(false);
@@ -89,22 +87,22 @@ function AdminPage() {
             <CardContent>
               <Stack spacing={1.5}>
                 <Typography variant="h5" fontWeight={700}>
-                  Admin Raporlari
+                  Yönetici Raporları
                 </Typography>
                 <Typography color="text.secondary">
-                  CSV disa aktarimi icin yonetici paneli.
+                  CSV dışa aktarımı için yönetici paneli.
                 </Typography>
                 {error && <Alert severity="error">{error}</Alert>}
                 {!isLoggedIn && (
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                     <TextField
-                      label="Username"
+                      label="Kullanıcı Adı"
                       placeholder="admin"
                       value={username}
                       onChange={(event) => setUsername(event.target.value)}
                     />
                     <TextField
-                      label="Password"
+                      label="Şifre"
                       type="password"
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
@@ -114,7 +112,7 @@ function AdminPage() {
                       onClick={loginAndLoadReports}
                       disabled={!username || !password || loading}
                     >
-                      {loading ? "Yukleniyor..." : "Giris"}
+                      {loading ? "Yükleniyor..." : "Giriş Yap"}
                     </Button>
                   </Stack>
                 )}
@@ -133,18 +131,18 @@ function AdminPage() {
                       alignItems={{ xs: "flex-start", sm: "center" }}
                       spacing={1}
                     >
-                      <Typography variant="h6">Katilimcilar ve Saatlere Gore Atolye Secimleri</Typography>
+                      <Typography variant="h6">Katılımcılar ve Saatlere Göre Atölye Seçimleri</Typography>
                       <Button
                         variant="outlined"
                         onClick={() =>
-                          downloadCsv("people-by-session.csv", csvPayload.peopleBySession)
+                          downloadCsv("katilimcilar-ve-atolye-secimleri.csv", csvPayload.peopleBySession)
                         }
                       >
-                        CSV Indir
+                        CSV İndir
                       </Button>
                     </Stack>
-                    <TableContainer>
-                      <Table size="small">
+                    <TableContainer sx={{ overflowX: "auto" }}>
+                      <Table size="small" sx={{ minWidth: 820 }}>
                         <TableHead>
                           <TableRow>
                             {peopleColumns.map((column) => (
@@ -154,7 +152,7 @@ function AdminPage() {
                         </TableHead>
                         <TableBody>
                           {peopleBySession.map((row) => (
-                            <TableRow key={row.userId}>
+                            <TableRow key={row["Katılımcı No"]}>
                               {peopleColumns.map((column) => (
                                 <TableCell key={column}>{row[column]}</TableCell>
                               ))}
@@ -177,24 +175,24 @@ function AdminPage() {
                         alignItems={{ xs: "flex-start", sm: "center" }}
                         spacing={1}
                       >
-                        <Typography variant="h6">{form.room} - Saatlere Gore Katilimcilar</Typography>
+                        <Typography variant="h6">{form.room} - Saat Dilimlerine Göre Katılımcılar</Typography>
                         <Button
                           variant="outlined"
                           onClick={() =>
                             downloadCsv(
-                              `${form.room.toLowerCase().replace(/\s+/g, "-")}-sessions.csv`,
+                              `${form.room.toLowerCase().replace(/\s+/g, "-")}-katilimcilar.csv`,
                               csvPayload.roomSessionForms?.[form.room] || ""
                             )
                           }
                         >
-                          CSV Indir
+                          CSV İndir
                         </Button>
                       </Stack>
-                      <TableContainer>
-                        <Table size="small">
+                      <TableContainer sx={{ overflowX: "auto" }}>
+                        <Table size="small" sx={{ minWidth: 720 }}>
                           <TableHead>
                             <TableRow>
-                              <TableCell>Katilimci #</TableCell>
+                              <TableCell>Katılımcı No</TableCell>
                               {form.timeSlots.map((slot) => (
                                 <TableCell key={slot}>{slot}</TableCell>
                               ))}
@@ -224,17 +222,17 @@ function AdminPage() {
                     alignItems={{ xs: "flex-start", sm: "center" }}
                     spacing={1}
                   >
-                    <Typography variant="h6">Tum Atolyeler (Tek CSV)</Typography>
+                    <Typography variant="h6">Tüm Atölyeler (Tek CSV)</Typography>
                     <Button
                       variant="contained"
                       onClick={() =>
                         downloadCsv(
-                          "all-room-session-forms.csv",
+                          "tum-atolyeler-ve-oturum-formlari.csv",
                           csvPayload.roomSessionFormsAll || ""
                         )
                       }
                     >
-                      Tumunu CSV Olarak Indir
+                      Tümünü CSV Olarak İndir
                     </Button>
                   </Stack>
                 </CardContent>

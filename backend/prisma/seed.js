@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 const ROOMS = [
   "Robotik Kodlama Atölyesi",
   "Ahşap ve Marangozluk Atölyesi",
-  "Sanat ve El işi atölyesi",
+  "Sanat ve El İşi Atölyesi",
   "Müzik ve Ritim Atölyesi",
   "Minik Şefler Atölyesi",
   "Hareket ve Oyun Atölyesi"

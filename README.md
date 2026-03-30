@@ -1,84 +1,90 @@
-# 🎈 Bil Koleji Florya 23 Nisan Atölye Sistemi
+# 🎈 Bil Koleji Florya April 23 Workshop System
 
-Modern, mobil odaklı etkinlik rezervasyon uygulaması.  
-Katılımcılar 6 atölye arasından 4 oturum seçer, sistem kapasiteyi otomatik yönetir. 🚀
+A modern, mobile-friendly event reservation app for workshop scheduling.
+Participants can choose 4 session slots from 6 available workshops, while the system automatically manages capacity.
 
-## ✨ Özellikler
+## ✨ Features
 
-- 📱 React + MUI ile mobil öncelikli arayüz
-- 🔐 Telefon numarası ile tekil katılımcı kaydı
-- 🧠 İş kuralları:
-  - Her atölyeden sadece 1 seçim
-  - Toplam 4 seçim zorunlu
-  - Dolu oturumlar pasif
-- 📈 Tüm oturumlar dolunca kapasite otomatik `5 -> 10`
-- 🧾 Admin paneli (`/admin`) + CSV raporları
+- 📱 Mobile-first interface built with `React` and `Material UI`
+- 🔐 Unique participant registration by phone number
+- 🧠 Reservation rules:
+  - Only 1 selection per workshop
+  - Exactly 4 session selections are required
+  - Full sessions are disabled automatically
+- 📈 Capacity expands automatically from `5` to `10` when all sessions are full
+- 🧾 Admin dashboard at `/admin` with CSV export support
 
-## 🛠️ Teknoloji Yığını
+## 🛠️ Tech Stack
 
 - Backend: `Node.js` + `Express`
-- Veritabanı: `SQLite`
+- Database: `SQLite`
 - ORM: `Prisma`
-- Frontend: `React` + `Material UI`
-- Container: Tek imaj, multi-stage `Dockerfile`
+- Frontend: `React` + `Vite`
+- UI Library: `Material UI`
+- Containerization: multi-stage `Dockerfile`
 
-## 🧩 Atölyeler
+## 🧩 Workshops
 
 1. Robotik Kodlama Atölyesi
 2. Ahşap ve Marangozluk Atölyesi
-3. Sanat ve El işi atölyesi
+3. Sanat ve El İşi Atölyesi
 4. Müzik ve Ritim Atölyesi
 5. Minik Şefler Atölyesi
 6. Hareket ve Oyun Atölyesi
 
-## ⏱️ Oturum Saatleri
+## ⏱️ Session Times
 
 - 11:30 - 12:00
 - 12:00 - 12:30
 - 12:30 - 13:00
 - 13:00 - 13:30
 
-## 🚀 Lokal Çalıştırma
+## 🚀 Local Development
+
+Install dependencies and initialize the database:
 
 ```bash
 npm install
-cp backend/.env.example backend/.env
 npm run db:init --workspace backend
 ```
 
-Ayrı terminallerde:
+Then start the backend and frontend in separate terminals:
 
 ```bash
 npm run dev --workspace backend
 npm run dev --workspace frontend
 ```
 
+Available URLs:
+
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:3000`
+- Admin page: `http://localhost:5173/admin`
 
 ## 🐳 Docker
 
-Build:
+Build the image:
 
 ```bash
 docker build -t appointment-manager .
 ```
 
-Run:
+Run the container:
 
 ```bash
 docker run -p 3000:3000 -e DATABASE_URL=file:/data/dev.db -v appointment-data:/data appointment-manager
 ```
 
-Container açılışında:
+On startup, the container runs:
 
 - `prisma migrate deploy`
 - `prisma db seed`
 
-## 🔌 API Uç Noktaları
+## 🔌 API Endpoints
 
-- `POST /users` -> kullanıcı oluşturur
-- `GET /sessions` -> oturum uygunluklarını listeler
-- `POST /reservations` -> rezervasyon oluşturur
-- `GET /users/:id/reservations` -> kullanıcı rezervasyonları
-- `GET /admin/reports` -> admin raporları (Basic Auth)
+- `POST /users` — create a participant
+- `GET /sessions` — list session availability
+- `POST /reservations` — create a reservation
+- `GET /users/:id/reservations` — list a participant's reservations
+- `GET /admin/reports` — admin reports with Basic Auth
+

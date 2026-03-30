@@ -12,11 +12,45 @@ const ADMIN_PASSWORD = "admin";
 const WORKSHOP_NAMES = [
   "Robotik Kodlama Atölyesi",
   "Ahşap ve Marangozluk Atölyesi",
-  "Sanat ve El işi atölyesi",
+  "Sanat ve El İşi Atölyesi",
   "Müzik ve Ritim Atölyesi",
   "Minik Şefler Atölyesi",
   "Hareket ve Oyun Atölyesi"
 ];
+
+function getWorkshopName(room) {
+  if (!room) {
+    return "";
+  }
+
+  const rawName = String(room.name || "").trim();
+  const indexedName =
+    typeof room.id === "number" ? WORKSHOP_NAMES[room.id - 1] || "" : "";
+
+  if (!rawName) {
+    return indexedName;
+  }
+
+  if (
+    /^\d+$/.test(rawName) ||
+    /^at(?:ö|o)lye\s*\d+$/i.test(rawName) ||
+    /^oda\s*\d+$/i.test(rawName)
+  ) {
+    return indexedName || rawName;
+  }
+
+  return rawName;
+}
+
+function buildRoomSessionCsvRows(form) {
+  return form.rows.map((row) => {
+    const csvRow = { "Katılımcı No": row.attendeeNo };
+    for (const slot of form.timeSlots) {
+      csvRow[slot] = row[slot] || "";
+    }
+    return csvRow;
+  });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -69,7 +103,7 @@ function requireAdmin(req, res, next) {
     credentials.password !== ADMIN_PASSWORD
   ) {
     res.set("WWW-Authenticate", 'Basic realm="Admin Reports"');
-    return res.status(401).json({ error: "Unauthorized admin access." });
+    return res.status(401).json({ error: "Yönetici erişim izni bulunamadı." });
   }
   return next();
 }
@@ -128,7 +162,7 @@ async function getSessionAvailability() {
     return {
       id: session.id,
       roomId: session.roomId,
-      roomName: session.room.name,
+      roomName: getWorkshopName(session.room),
       startTime: session.startTime,
       endTime: session.endTime,
       capacity: session.capacity,
@@ -144,18 +178,18 @@ app.post("/users", async (req, res) => {
     const { name, lastName, age, phoneNumber } = req.body;
     if (!name || !lastName || !age || !phoneNumber) {
       return res.status(400).json({
-        error: "Ad, soyad, yas ve telefon numarasi zorunludur."
+        error: "Ad, soyad, yaş ve telefon numarası zorunludur."
       });
     }
 
     const parsedAge = Number(age);
     if (!Number.isInteger(parsedAge) || parsedAge <= 0) {
-      return res.status(400).json({ error: "Yas pozitif bir tam sayi olmalidir." });
+      return res.status(400).json({ error: "Yaş pozitif bir tam sayı olmalıdır." });
     }
 
     const normalizedPhoneNumber = String(phoneNumber).trim();
     if (normalizedPhoneNumber.length < 7) {
-      return res.status(400).json({ error: "Telefon numarasi gecersiz." });
+      return res.status(400).json({ error: "Telefon numarası geçersiz." });
     }
 
     const user = await prisma.user.create({
@@ -173,9 +207,9 @@ app.post("/users", async (req, res) => {
     if (error.code === "P2002") {
       return res
         .status(409)
-        .json({ error: "Bu telefon numarasi ile kayit zaten var." });
+        .json({ error: "Bu telefon numarası ile kayıt zaten var." });
     }
-    return res.status(500).json({ error: "Kullanici olusturulamadi." });
+    return res.status(500).json({ error: "Kullanıcı oluşturulamadı." });
   }
 });
 
@@ -184,7 +218,7 @@ app.post("/reservations", async (req, res) => {
   if (!userId || !sessionId) {
     return res
       .status(400)
-      .json({ error: "Rezervasyon icin userId ve sessionId zorunludur." });
+      .json({ error: "Rezervasyon için userId ve sessionId zorunludur." });
   }
 
   try {
@@ -261,19 +295,19 @@ app.post("/reservations", async (req, res) => {
   } catch (error) {
     console.error("POST /reservations error:", error);
     if (error.message === "USER_NOT_FOUND") {
-      return res.status(404).json({ error: "Kullanici bulunamadi." });
+      return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
     if (error.message === "SESSION_NOT_FOUND") {
-      return res.status(404).json({ error: "Oturum bulunamadi." });
+      return res.status(404).json({ error: "Oturum bulunamadı." });
     }
     if (error.message === "ALREADY_BOOKED_IN_ROOM") {
       return res.status(409).json({
-        error: "Bir kullanici ayni atolyeden yalnizca bir oturum secebilir."
+        error: "Bir kullanıcı aynı atölyeden yalnızca bir oturum seçebilir."
       });
     }
     if (error.message === "MAX_ROOMS_REACHED") {
       return res.status(409).json({
-        error: "Bir kullanici en fazla 4 atolye secebilir."
+        error: "Bir kullanıcı en fazla 4 atölye seçebilir."
       });
     }
     if (error.message === "SESSION_FULL") {
@@ -286,7 +320,7 @@ app.post("/reservations", async (req, res) => {
         error: "Bu rezervasyon zaten mevcut."
       });
     }
-    return res.status(500).json({ error: "Rezervasyon olusturulamadi." });
+    return res.status(500).json({ error: "Rezervasyon oluşturulamadı." });
   }
 });
 
@@ -296,7 +330,7 @@ app.get("/sessions", async (_req, res) => {
     return res.json({ sessions });
   } catch (error) {
     console.error("GET /sessions error:", error);
-    return res.status(500).json({ error: "Oturumlar yuklenemedi." });
+    return res.status(500).json({ error: "Oturumlar yüklenemedi." });
   }
 });
 
@@ -307,7 +341,7 @@ app.get("/users/:id/reservations", async (req, res) => {
       where: { id: userId }
     });
     if (!user) {
-      return res.status(404).json({ error: "Kullanici bulunamadi." });
+      return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     }
 
     const reservations = await prisma.reservation.findMany({
@@ -327,7 +361,7 @@ app.get("/users/:id/reservations", async (req, res) => {
     return res.json({ user, reservations });
   } catch (error) {
     console.error("GET /users/:id/reservations error:", error);
-    return res.status(500).json({ error: "Rezervasyonlar yuklenemedi." });
+    return res.status(500).json({ error: "Rezervasyonlar yüklenemedi." });
   }
 });
 
@@ -350,24 +384,26 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
       const key = reservation.user.id;
       if (!userMap.has(key)) {
         userMap.set(key, {
-          userId: reservation.user.id,
-          name: reservation.user.name,
-          lastName: reservation.user.lastName,
-          phoneNumber: reservation.user.phoneNumber,
-          age: reservation.user.age
+          "Katılımcı No": reservation.user.id,
+          Ad: reservation.user.name,
+          Soyad: reservation.user.lastName,
+          "Telefon Numarası": reservation.user.phoneNumber,
+          Yaş: reservation.user.age
         });
       }
       const slotKey = `${reservation.session.startTime}-${reservation.session.endTime}`;
-      userMap.get(key)[slotKey] = reservation.session.room.name;
+      userMap.get(key)[slotKey] = getWorkshopName(reservation.session.room);
     }
 
-    const peopleBySession = Array.from(userMap.values()).map((row) => {
-      const normalized = { ...row };
-      for (const slot of timeSlots) {
-        normalized[slot] = normalized[slot] || "";
-      }
-      return normalized;
-    });
+    const peopleBySession = Array.from(userMap.values())
+      .sort((a, b) => a["Katılımcı No"] - b["Katılımcı No"])
+      .map((row) => {
+        const normalized = { ...row };
+        for (const slot of timeSlots) {
+          normalized[slot] = normalized[slot] || "";
+        }
+        return normalized;
+      });
 
     const roomSessionForms = WORKSHOP_NAMES.map((roomName) => {
       const sessionBuckets = {};
@@ -375,7 +411,7 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
         sessionBuckets[slot] = reservations
           .filter((reservation) => {
             const reservationSlot = `${reservation.session.startTime}-${reservation.session.endTime}`;
-            return reservation.session.room.name === roomName && reservationSlot === slot;
+            return getWorkshopName(reservation.session.room) === roomName && reservationSlot === slot;
           })
           .map((reservation) => {
             return `${reservation.user.name} ${reservation.user.lastName}`.trim();
@@ -400,12 +436,12 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
 
     const roomSessionFormsCsv = {};
     for (const form of roomSessionForms) {
-      roomSessionFormsCsv[form.room] = toCsv(form.rows);
+      roomSessionFormsCsv[form.room] = toCsv(buildRoomSessionCsvRows(form));
     }
     const roomSessionFormsAll = roomSessionForms
       .map((form) => {
-        const sectionHeader = `Room: ${form.room}`;
-        const sectionCsv = toCsv(form.rows);
+        const sectionHeader = `Atölye: ${form.room}`;
+        const sectionCsv = toCsv(buildRoomSessionCsvRows(form));
         return `${sectionHeader}\n${sectionCsv}`;
       })
       .join("\n\n");
@@ -421,10 +457,9 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
     });
   } catch (error) {
     console.error("GET /admin/reports error:", error);
-    return res.status(500).json({ error: "Admin raporlari olusturulamadi." });
+    return res.status(500).json({ error: "Yönetici raporları oluşturulamadı." });
   }
 });
-
 app.use(express.static(FRONTEND_DIST_PATH));
 app.get("*", (req, res, next) => {
   if (
