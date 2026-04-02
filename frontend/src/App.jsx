@@ -458,7 +458,7 @@ function App() {
                 boxShadow: "0 8px 20px rgba(91, 91, 214, 0.45)"
               }}
             >
-              EV
+              Bil
             </Avatar>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.2 }}>

@@ -13,6 +13,7 @@ Participants can choose 4 session slots from 6 available workshops, while the sy
   - Full sessions are disabled automatically
 - 📈 Capacity expands automatically from `5` to `10` when all sessions are full
 - 🧾 Admin dashboard at `/admin` with CSV export support
+- 🗑️ Database clearing tool with automatic backup downloads
 
 ## 🛠️ Tech Stack
 
@@ -86,5 +87,8 @@ On startup, the container runs:
 - `GET /sessions` — list session availability
 - `POST /reservations` — create a reservation
 - `GET /users/:id/reservations` — list a participant's reservations
-- `GET /admin/reports` — admin reports with Basic Auth
+- `GET /admin/sessions-by-room` — admin session + room capacity / availability (Basic Auth)
+- `PATCH /admin/sessions/:sessionId/capacity` — adjust capacity for a session (Basic Auth)
+- `GET /admin/reports` — admin report data with CSV payloads (Basic Auth)
+- `POST /admin/clear-database` — clear all data and reset capacities (admin only)
 

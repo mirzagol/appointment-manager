@@ -1,7 +1,14 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
+
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "file:./dev.db";
+}
+
 const prisma = require("./db");
 
 const app = express();
@@ -566,6 +573,26 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
   } catch (error) {
     console.error("GET /admin/reports error:", error);
     return res.status(500).json({ error: "Yönetici raporları oluşturulamadı." });
+  }
+});
+
+app.post("/admin/clear-database", requireAdmin, async (_req, res) => {
+  try {
+    // Delete all reservations first (due to foreign key constraints)
+    await prisma.reservation.deleteMany({});
+
+    // Delete all users
+    await prisma.user.deleteMany({});
+
+    // Reset all session capacities to 5
+    await prisma.session.updateMany({
+      data: { capacity: 5 }
+    });
+
+    return res.json({ message: "Database cleared successfully. All capacities reset to 5." });
+  } catch (error) {
+    console.error("POST /admin/clear-database error:", error);
+    return res.status(500).json({ error: "Failed to clear database." });
   }
 });
 app.use(express.static(FRONTEND_DIST_PATH));

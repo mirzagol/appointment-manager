@@ -20,7 +20,11 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
@@ -83,6 +87,9 @@ function AdminPage() {
     roomSessionForms: {},
     roomSessionFormsAll: ""
   });
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearConfirmation, setClearConfirmation] = useState("");
+  const [clearingDatabase, setClearingDatabase] = useState(false);
 
   // Load rooms and sessions on mount
   useEffect(() => {
@@ -260,6 +267,70 @@ function AdminPage() {
     downloadCsv("appointment-reports.csv", csv);
   };
 
+  const handleClearDatabase = async () => {
+    if (clearConfirmation !== "I UNDERSTAND") {
+      setError("Please type 'I UNDERSTAND' to confirm.");
+      return;
+    }
+
+    setClearingDatabase(true);
+    setError("");
+
+    try {
+      await loadDetailedReports();
+
+      // ensure we use latest payload values
+      const backupCsv1 = csvPayload.peopleBySession;
+      const backupCsv2 = csvPayload.roomSessionFormsAll;
+
+      if (!backupCsv1 || !backupCsv2) {
+        throw new Error("Backup report data unavailable.");
+      }
+
+      // Download both reports
+      downloadCsv("participants-and-sessions-backup.csv", backupCsv1);
+      downloadCsv("all-workshops-backup.csv", backupCsv2);
+
+      const encodedCreds = sessionStorage.getItem("adminAuth");
+      if (!encodedCreds) {
+        throw new Error("Admin credentials missing. Please re-login.");
+      }
+
+      const response = await fetch(`${API_BASE}/admin/clear-database`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${encodedCreds}`
+        }
+      });
+
+      let result;
+      const text = await response.text();
+      try {
+        result = JSON.parse(text);
+      } catch (_e) {
+        result = null;
+      }
+
+      if (!response.ok) {
+        const message = result?.error || text || `HTTP ${response.status}`;
+        throw new Error(`Failed to clear database: ${message}`);
+      }
+
+      // Refresh data after successful clear
+      await loadReportsAndSessions();
+      await loadDetailedReports();
+
+      setSuccessMessage("Database cleared successfully! Backup reports downloaded.");
+      setClearDialogOpen(false);
+      setClearConfirmation("");
+    } catch (err) {
+      setError("Failed to clear database: " + err.message);
+    } finally {
+      setClearingDatabase(false);
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <Box sx={{ minHeight: "100dvh", backgroundColor: "#f6f8ff", py: 4 }}>
@@ -319,6 +390,16 @@ function AdminPage() {
             <Typography variant="body2" sx={{ color: "#666" }}>
               Manage room capacity and view session reports
             </Typography>
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => setClearDialogOpen(true)}
+                sx={{ borderColor: "#d32f2f", color: "#d32f2f", "&:hover": { borderColor: "#b71c1c", bgcolor: "#ffebee" } }}
+              >
+                ⚠️ Clear Database
+              </Button>
+            </Box>
           </Box>
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -643,6 +724,69 @@ function AdminPage() {
               {successMessage}
             </Alert>
           </Snackbar>
+
+          {/* Clear Database Dialog */}
+          <Dialog
+            open={clearDialogOpen}
+            onClose={() => setClearDialogOpen(false)}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle sx={{ color: "#d32f2f", fontWeight: 700 }}>
+              ⚠️ DANGER: Clear Database
+            </DialogTitle>
+            <DialogContent>
+              <Stack spacing={3}>
+                <Alert severity="error" sx={{ fontWeight: 600 }}>
+                  This action will permanently delete ALL data:
+                  <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
+                    <li>All user registrations</li>
+                    <li>All session reservations</li>
+                    <li>Reset all capacities to 5</li>
+                  </ul>
+                  <strong>This cannot be undone!</strong>
+                </Alert>
+
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  To confirm, please type <strong>"I UNDERSTAND"</strong> in the box below:
+                </Typography>
+
+                <TextField
+                  fullWidth
+                  label="Confirmation"
+                  value={clearConfirmation}
+                  onChange={(e) => setClearConfirmation(e.target.value)}
+                  placeholder="I UNDERSTAND"
+                  error={clearConfirmation !== "" && clearConfirmation !== "I UNDERSTAND"}
+                  helperText={clearConfirmation !== "" && clearConfirmation !== "I UNDERSTAND" ? "Please type exactly 'I UNDERSTAND'" : ""}
+                />
+
+                <Alert severity="info">
+                  <strong>Before clearing:</strong> Backup reports will be automatically downloaded containing all current data.
+                </Alert>
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => {
+                  setClearDialogOpen(false);
+                  setClearConfirmation("");
+                }}
+                disabled={clearingDatabase}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleClearDatabase}
+                variant="contained"
+                color="error"
+                disabled={clearConfirmation !== "I UNDERSTAND" || clearingDatabase}
+                sx={{ bgcolor: "#d32f2f", "&:hover": { bgcolor: "#b71c1c" } }}
+              >
+                {clearingDatabase ? "Clearing..." : "Clear Database"}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Container>
       </Box>
     </ThemeProvider>
