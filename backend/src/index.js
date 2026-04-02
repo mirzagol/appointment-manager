@@ -126,23 +126,21 @@ async function expandCapacityIfAllSessionsAreFull(tx) {
   const allFull = sessions.every(
     (session) => session._count.reservations >= session.capacity
   );
-  const hasExpandableSessions = sessions.some((session) => session.capacity < 10);
 
-  if (allFull && hasExpandableSessions) {
-    await tx.session.updateMany({
-      where: {
-        capacity: {
-          lt: 10
-        }
-      },
-      data: {
-        capacity: 10
-      }
-    });
-    return true;
+  if (!allFull) {
+    return false;
   }
 
-  return false;
+  // All sessions are currently at capacity, so extend each session by 5 spots.
+  await tx.session.updateMany({
+    data: {
+      capacity: {
+        increment: 5
+      }
+    }
+  });
+
+  return true;
 }
 
 async function getSessionAvailability() {
@@ -362,6 +360,116 @@ app.get("/users/:id/reservations", async (req, res) => {
   } catch (error) {
     console.error("GET /users/:id/reservations error:", error);
     return res.status(500).json({ error: "Rezervasyonlar yüklenemedi." });
+  }
+});
+
+app.get("/admin/sessions-by-room", requireAdmin, async (_req, res) => {
+  try {
+    const sessions = await prisma.session.findMany({
+      include: {
+        room: true,
+        _count: {
+          select: { reservations: true }
+        }
+      },
+      orderBy: [{ roomId: "asc" }, { startTime: "asc" }]
+    });
+
+    const grouped = {};
+    for (const session of sessions) {
+      const roomName = getWorkshopName(session.room);
+      if (!grouped[roomName]) {
+        grouped[roomName] = [];
+      }
+      grouped[roomName].push({
+        id: session.id,
+        roomId: session.roomId,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        capacity: session.capacity,
+        reservedCount: session._count.reservations,
+        availableSpots: Math.max(session.capacity - session._count.reservations, 0)
+      });
+    }
+
+    return res.json(grouped);
+  } catch (error) {
+    console.error("GET /admin/sessions-by-room error:", error);
+    return res.status(500).json({ error: "Oturumlar yüklenemedi." });
+  }
+});
+
+app.patch("/admin/sessions/:sessionId/capacity", requireAdmin, async (req, res) => {
+  try {
+    const sessionId = Number(req.params.sessionId);
+    const { newCapacity } = req.body;
+
+    if (!Number.isInteger(newCapacity) || newCapacity < 1) {
+      return res.status(400).json({ error: "Kapasite pozitif bir tam sayı olmalıdır." });
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        _count: {
+          select: { reservations: true }
+        }
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: "Oturum bulunamadı." });
+    }
+
+    const allSessions = await prisma.session.findMany({
+      include: {
+        _count: {
+          select: { reservations: true }
+        }
+      }
+    });
+
+    const allFull = allSessions.every(
+      (s) => s._count.reservations >= s.capacity
+    );
+
+    // If all sessions are full, max capacity is 10
+    const maxAllowed = allFull ? 10 : 999999;
+    if (newCapacity > maxAllowed) {
+      return res.status(400).json({
+        error: `Tüm oturumlar dolu olduğunda maksimum kapasite ${maxAllowed} dir.`
+      });
+    }
+
+    // Also ensure we don't go below reserved count
+    if (newCapacity < session._count.reservations) {
+      return res.status(400).json({
+        error: `Kapasite, mevcut rezervasyon sayısından (${session._count.reservations}) az olamaz.`
+      });
+    }
+
+    const updated = await prisma.session.update({
+      where: { id: sessionId },
+      data: { capacity: newCapacity },
+      include: {
+        room: true,
+        _count: {
+          select: { reservations: true }
+        }
+      }
+    });
+
+    return res.json({
+      id: updated.id,
+      roomId: updated.roomId,
+      startTime: updated.startTime,
+      endTime: updated.endTime,
+      capacity: updated.capacity,
+      reservedCount: updated._count.reservations
+    });
+  } catch (error) {
+    console.error("PATCH /admin/sessions/:sessionId/capacity error:", error);
+    return res.status(500).json({ error: "Kapasite güncellenemedi." });
   }
 });
 

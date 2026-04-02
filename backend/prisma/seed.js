@@ -10,6 +10,7 @@ const ROOMS = [
   "Minik Şefler Atölyesi",
   "Hareket ve Oyun Atölyesi"
 ];
+
 const TIME_SLOTS = [
   { startTime: "11:30", endTime: "12:00" },
   { startTime: "12:00", endTime: "12:30" },
@@ -18,21 +19,11 @@ const TIME_SLOTS = [
 ];
 
 async function main() {
-  const existingRooms = await prisma.room.findMany({
-    orderBy: { id: "asc" }
-  });
+  console.log("Seeding database: clearing all data...");
+  await prisma.reservation.deleteMany({});
+  await prisma.user.deleteMany({});
 
-  for (let index = 0; index < Math.min(existingRooms.length, ROOMS.length); index += 1) {
-    const room = existingRooms[index];
-    const targetName = ROOMS[index];
-    if (room.name !== targetName) {
-      await prisma.room.update({
-        where: { id: room.id },
-        data: { name: targetName }
-      });
-    }
-  }
-
+  console.log("Creating rooms and sessions...");
   for (const roomName of ROOMS) {
     await prisma.room.upsert({
       where: { name: roomName },
@@ -41,13 +32,8 @@ async function main() {
     });
   }
 
-  const rooms = await prisma.room.findMany({
-    where: {
-      name: {
-        in: ROOMS
-      }
-    }
-  });
+  const rooms = await prisma.room.findMany({ orderBy: { id: "asc" } });
+
   for (const room of rooms) {
     for (const slot of TIME_SLOTS) {
       await prisma.session.upsert({
@@ -58,7 +44,9 @@ async function main() {
             endTime: slot.endTime
           }
         },
-        update: {},
+        update: {
+          capacity: 5
+        },
         create: {
           roomId: room.id,
           startTime: slot.startTime,
@@ -68,6 +56,8 @@ async function main() {
       });
     }
   }
+
+  console.log("Database seeded successfully (empty with sessions only).");
 }
 
 main()
