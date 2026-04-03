@@ -73,13 +73,15 @@ docker build -t appointment-manager .
 Run the container:
 
 ```bash
-docker run -p 3000:3000 -e DATABASE_URL=file:/data/dev.db -v appointment-data:/data appointment-manager
+docker run -p 3000:3000 appointment-manager
 ```
 
 On startup, the container runs:
 
 - `prisma migrate deploy`
 - `prisma db seed`
+
+The app will be available at `http://localhost:3000`.
 
 ## 🔌 API Endpoints
 

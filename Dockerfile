@@ -13,7 +13,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV DATABASE_URL=file:/data/dev.db
+ENV DATABASE_URL=file:./backend/prisma/dev.db
 
 COPY package.json ./
 COPY backend/package.json backend/package.json
@@ -26,7 +26,6 @@ COPY --from=frontend-builder /app/frontend/dist frontend/dist
 
 RUN chmod +x backend/start.sh
 
-VOLUME ["/data"]
 EXPOSE 3000
 
 CMD ["sh", "backend/start.sh"]
