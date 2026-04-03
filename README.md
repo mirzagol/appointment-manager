@@ -64,24 +64,25 @@ Available URLs:
 
 ## 🐳 Docker
 
-Build the image:
+Build and run with docker-compose:
 
 ```bash
-docker build -t appointment-manager .
+docker-compose up --build
 ```
 
-Run the container:
+Frontend on `http://localhost:5173`, backend API on `http://localhost:3000`.
+
+Or run separately:
 
 ```bash
-docker run -p 3000:3000 appointment-manager
+# Backend
+docker build -t appointment-manager-backend .
+docker run -p 3000:3000 appointment-manager-backend
+
+# Frontend
+docker build -t appointment-manager-frontend -f Dockerfile.frontend .
+docker run -p 5173:80 appointment-manager-frontend
 ```
-
-On startup, the container runs:
-
-- `prisma migrate deploy`
-- `prisma db seed`
-
-The app will be available at `http://localhost:3000`.
 
 ## 🔌 API Endpoints
 

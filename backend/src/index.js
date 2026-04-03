@@ -595,7 +595,6 @@ app.post("/admin/clear-database", requireAdmin, async (_req, res) => {
     return res.status(500).json({ error: "Failed to clear database." });
   }
 });
-app.use(express.static(FRONTEND_DIST_PATH));
 app.get("*", (req, res, next) => {
   if (
     req.path.startsWith("/users") ||
