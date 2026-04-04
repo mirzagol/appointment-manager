@@ -1,15 +1,31 @@
-version: '3.8'
-
 services:
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "5173:80"
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
     ports:
       - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: file:/data/dev.db
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Browser calls this URL from the host machine (not from inside Docker).
+        VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:

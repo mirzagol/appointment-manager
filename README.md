@@ -64,24 +64,23 @@ Available URLs:
 
 ## 🐳 Docker
 
-Build and run with docker-compose:
+See **[DOCKER.md](./DOCKER.md)** for full Compose deployment (migrations on startup, volumes, production API URL).
 
 ```bash
-docker-compose up --build
+make up
+# or: docker compose up -d --build
 ```
 
-Frontend on `http://localhost:5173`, backend API on `http://localhost:3000`.
+Frontend: `http://localhost:5173`, API: `http://localhost:3000`.
 
-Or run separately:
+Build images separately from the repo root:
 
 ```bash
-# Backend
-docker build -t appointment-manager-backend .
-docker run -p 3000:3000 appointment-manager-backend
-
-# Frontend
-docker build -t appointment-manager-frontend -f Dockerfile.frontend .
-docker run -p 5173:80 appointment-manager-frontend
+docker build -t appointment-manager-backend -f backend/Dockerfile .
+docker build -t appointment-manager-frontend -f frontend/Dockerfile \
+  --build-arg VITE_API_BASE_URL=http://localhost:3000 .
+docker run -d -p 3000:3000 -e DATABASE_URL=file:/data/dev.db -v appt-db:/data appointment-manager-backend
+docker run -d -p 5173:80 appointment-manager-frontend
 ```
 
 ## 🔌 API Endpoints
