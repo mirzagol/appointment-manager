@@ -63,10 +63,7 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
-app.use((req, res, next) => {
-  res.setHeader("Referrer-Policy", "no-referrer"); 
-  next();
-});
+
 
 function toCsv(rows) {
   if (!rows.length) {
