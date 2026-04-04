@@ -19,11 +19,7 @@ const TIME_SLOTS = [
 ];
 
 async function main() {
-  console.log("Seeding database: clearing all data...");
-  await prisma.reservation.deleteMany({});
-  await prisma.user.deleteMany({});
-
-  console.log("Creating rooms and sessions...");
+  console.log("Seeding database: ensuring rooms and sessions...");
   for (const roomName of ROOMS) {
     await prisma.room.upsert({
       where: { name: roomName },
