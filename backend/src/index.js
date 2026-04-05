@@ -59,7 +59,14 @@ function buildRoomSessionCsvRows(form) {
   });
 }
 
-app.use(cors());
+const corsOptions = {
+  origin: true,
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["WWW-Authenticate"],
+  optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 

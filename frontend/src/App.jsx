@@ -20,8 +20,7 @@ import {
   Typography
 } from "@mui/material";
 import { alpha, createTheme } from "@mui/material/styles";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+import { API_BASE } from "./apiConfig";
 
 const STEPS = {
   intro: "intro",
