@@ -432,43 +432,46 @@ function App() {
         >
           <Stack spacing={2} sx={{ width: "100%" }}>
         <Paper
-          elevation={0}
-          sx={{
-            p: 2.5,
-            borderRadius: 3,
-            border: "1px solid",
-            borderColor: alpha(theme.palette.primary.main, 0.14),
-            backdropFilter: "blur(12px)",
-            background:
-              "linear-gradient(130deg, rgba(255,255,255,0.72) 0%, rgba(238,242,255,0.64) 100%)",
-            boxShadow: "0 18px 36px rgba(30, 41, 59, 0.10)"
-          }}
-        >
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1.5}
-            alignItems={{ xs: "flex-start", sm: "center" }}
-          >
-            <Avatar
-              sx={{
-                bgcolor: "primary.main",
-                width: 46,
-                height: 46,
-                boxShadow: "0 8px 20px rgba(91, 91, 214, 0.45)"
-              }}
-            >
-              Bil
-            </Avatar>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.2 }}>
-                Bil Koleji Florya 23 Nisan Atölye Sistemi
-              </Typography>
-              <Typography color="text.secondary" fontSize={14}>
-                23 Nisan etkinliği için atölye seçim platformu.
-              </Typography>
-            </Box>
-          </Stack>
-        </Paper>
+  elevation={0}
+  sx={{
+    p: 2.5,
+    borderRadius: 3,
+    border: "1px solid",
+    borderColor: alpha(theme.palette.primary.main, 0.14),
+    backdropFilter: "blur(12px)",
+    background:
+      "linear-gradient(130deg, rgba(255,255,255,0.72) 0%, rgba(238,242,255,0.64) 100%)",
+    boxShadow: "0 18px 36px rgba(30, 41, 59, 0.10)"
+  }}
+>
+  <Stack
+    direction = "row"
+    spacing={1.5}
+    alignItems={{ xs: "flex-start", sm: "center" }}
+  >
+    <Box
+      component="img"
+      src="/logo.png"
+      alt="Bil Koleji Logo"
+      sx={{
+        width: 46,
+        height: 46,
+        borderRadius: "50%", 
+        boxShadow: "0 8px 20px rgba(91, 91, 214, 0.45)",
+        objectFit: "cover"
+      }}
+    />
+    <Box sx={{ minWidth: 0 }}>
+      <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+        Bil Koleji Florya
+      </Typography>
+      <Typography color="text.secondary" fontSize={12}>
+        23 Nisan etkinliği için atölye seçim platformu.
+      </Typography>
+    </Box>
+  </Stack>
+</Paper>
+
 
         <Paper
           elevation={0}
