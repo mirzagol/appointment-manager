@@ -80,9 +80,11 @@ function AdminPage() {
   const [editingSession, setEditingSession] = useState(null);
   const [editingCapacity, setEditingCapacity] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [allUsers, setAllUsers] = useState([]);
   const [peopleBySession, setPeopleBySession] = useState([]);
   const [roomSessionForms, setRoomSessionForms] = useState([]);
   const [csvPayload, setCsvPayload] = useState({
+    allUsers: "",
     peopleBySession: "",
     roomSessionForms: {},
     roomSessionFormsAll: ""
@@ -90,6 +92,19 @@ function AdminPage() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [clearConfirmation, setClearConfirmation] = useState("");
   const [clearingDatabase, setClearingDatabase] = useState(false);
+
+  const allUsersColumns = useMemo(() => {
+    if (!allUsers.length) return [];
+    return Object.keys(allUsers[0]);
+  }, [allUsers]);
+
+  const peopleBySessionColumns = useMemo(() => {
+    if (!peopleBySession.length) return [];
+    return Object.keys(peopleBySession[0]);
+  }, [peopleBySession]);
+
+  const peopleBySessionHeaderLabel = (key) =>
+    key === "Katılımcı No" ? "Row Number" : key;
 
   // Load rooms and sessions on mount
   useEffect(() => {
@@ -215,9 +230,15 @@ function AdminPage() {
       if (!response.ok) throw new Error("Failed to load detailed reports");
 
       const data = await response.json();
+      setAllUsers(data.allUsers ?? []);
       setPeopleBySession(data.peopleBySession);
       setRoomSessionForms(data.roomSessionForms);
-      setCsvPayload(data.csv);
+      setCsvPayload({
+        allUsers: data.csv?.allUsers ?? "",
+        peopleBySession: data.csv?.peopleBySession ?? "",
+        roomSessionForms: data.csv?.roomSessionForms ?? {},
+        roomSessionFormsAll: data.csv?.roomSessionFormsAll ?? ""
+      });
     } catch (err) {
       setError("Failed to load detailed reports: " + err.message);
     }
@@ -607,6 +628,61 @@ function AdminPage() {
                 </Box>
               </Paper>
 
+              {/* All users (complete directory) */}
+              <Paper sx={{ p: 3, borderRadius: 2, border: "1px solid #E0E0E0", mb: 4 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: "#333" }}>
+                    All Users
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => downloadCsv("all-users.csv", csvPayload.allUsers)}
+                  >
+                    Download CSV
+                  </Button>
+                </Box>
+                <Typography variant="body2" sx={{ color: "#666", mb: 2 }}>
+                  Every registered user (name, last name, age, phone). 
+                </Typography>
+                {allUsers.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: "#666" }}>
+                    No registered users yet.
+                  </Typography>
+                ) : (
+                  <Box sx={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #E0E0E0", backgroundColor: "#F4F7FF" }}>
+                          {allUsersColumns.map((header) => (
+                            <th key={header} style={{ padding: "12px", textAlign: "left", fontWeight: 700, color: "#333" }}>
+                              {header}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allUsers.map((row, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid #E0E0E0" }}>
+                            {allUsersColumns.map((col) => {
+                              const isRowNumberCol = col === "Row Number";
+                              const raw = isRowNumberCol ? idx + 1 : row[col];
+                              const display =
+                                raw === undefined || raw === null || raw === "" ? "-" : raw;
+                              return (
+                                <td key={col} style={{ padding: "12px", color: "#333" }}>
+                                  {display}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Box>
+                )}
+              </Paper>
+
               {/* People by Session Report */}
               <Paper sx={{ p: 3, borderRadius: 2, border: "1px solid #E0E0E0", mb: 4 }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -625,9 +701,9 @@ function AdminPage() {
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ borderBottom: "2px solid #E0E0E0", backgroundColor: "#F4F7FF" }}>
-                        {peopleBySession.length > 0 && Object.keys(peopleBySession[0]).map((header) => (
+                        {peopleBySessionColumns.map((header) => (
                           <th key={header} style={{ padding: "12px", textAlign: "left", fontWeight: 700, color: "#333" }}>
-                            {header}
+                            {peopleBySessionHeaderLabel(header)}
                           </th>
                         ))}
                       </tr>
@@ -635,11 +711,17 @@ function AdminPage() {
                     <tbody>
                       {peopleBySession.map((row, idx) => (
                         <tr key={idx} style={{ borderBottom: "1px solid #E0E0E0" }}>
-                          {Object.values(row).map((value, cellIdx) => (
-                            <td key={cellIdx} style={{ padding: "12px", color: "#333" }}>
-                              {value || "-"}
-                            </td>
-                          ))}
+                          {peopleBySessionColumns.map((col) => {
+                            const isRowNumberCol = col === "Row Number" || col === "Katılımcı No";
+                            const raw = isRowNumberCol ? idx + 1 : row[col];
+                            const display =
+                              raw === undefined || raw === null || raw === "" ? "-" : raw;
+                            return (
+                              <td key={col} style={{ padding: "12px", color: "#333" }}>
+                                {display}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>

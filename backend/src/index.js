@@ -492,6 +492,17 @@ app.patch("/admin/sessions/:sessionId/capacity", requireAdmin, async (req, res) 
 app.get("/admin/reports", requireAdmin, async (_req, res) => {
   try {
     const timeSlots = ["11:30-12:00", "12:00-12:30", "12:30-13:00", "13:00-13:30"];
+    const users = await prisma.user.findMany({
+      orderBy: { id: "asc" }
+    });
+    const allUsers = users.map((user, index) => ({
+      "Row Number": index + 1,
+      Name: user.name,
+      "Last Name": user.lastName,
+      Age: user.age,
+      "Phone Number": user.phoneNumber
+    }));
+
     const reservations = await prisma.reservation.findMany({
       include: {
         user: true,
@@ -508,7 +519,7 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
       const key = reservation.user.id;
       if (!userMap.has(key)) {
         userMap.set(key, {
-          "Katılımcı No": reservation.user.id,
+          _sortId: reservation.user.id,
           Ad: reservation.user.name,
           Soyad: reservation.user.lastName,
           "Telefon Numarası": reservation.user.phoneNumber,
@@ -520,9 +531,13 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
     }
 
     const peopleBySession = Array.from(userMap.values())
-      .sort((a, b) => a["Katılımcı No"] - b["Katılımcı No"])
-      .map((row) => {
-        const normalized = { ...row };
+      .sort((a, b) => a._sortId - b._sortId)
+      .map((row, index) => {
+        const { _sortId, ...userFields } = row;
+        const normalized = {
+          "Row Number": index + 1,
+          ...userFields
+        };
         for (const slot of timeSlots) {
           normalized[slot] = normalized[slot] || "";
         }
@@ -571,9 +586,11 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
       .join("\n\n");
 
     return res.json({
+      allUsers,
       peopleBySession,
       roomSessionForms,
       csv: {
+        allUsers: toCsv(allUsers),
         peopleBySession: toCsv(peopleBySession),
         roomSessionForms: roomSessionFormsCsv,
         roomSessionFormsAll

@@ -568,7 +568,7 @@ function App() {
                 <Stack spacing={1.5}>
                   <TextField
                     fullWidth
-                    label="Ad"
+                    label="Öğrencinin Adı"
                     value={userInfo.name}
                     onChange={(event) =>
                       setUserInfo((prev) => ({ ...prev, name: event.target.value }))
@@ -577,7 +577,7 @@ function App() {
                   />
                   <TextField
                     fullWidth
-                    label="Soyad"
+                    label="Öğrencinin Soyadı"
                     value={userInfo.lastName}
                     onChange={(event) =>
                       setUserInfo((prev) => ({ ...prev, lastName: event.target.value }))
