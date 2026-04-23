@@ -92,10 +92,13 @@ function AdminPage() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [clearConfirmation, setClearConfirmation] = useState("");
   const [clearingDatabase, setClearingDatabase] = useState(false);
+  const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   const allUsersColumns = useMemo(() => {
     if (!allUsers.length) return [];
-    return Object.keys(allUsers[0]);
+    return Object.keys(allUsers[0]).filter((key) => key !== "id");
   }, [allUsers]);
 
   const peopleBySessionColumns = useMemo(() => {
@@ -349,6 +352,51 @@ function AdminPage() {
       setError("Failed to clear database: " + err.message);
     } finally {
       setClearingDatabase(false);
+    }
+  };
+
+  const promptDeleteUser = (user) => {
+    setDeleteUserTarget(user);
+    setDeleteUserDialogOpen(true);
+    setError("");
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUserTarget?.id) {
+      setError("Silinecek kullanıcı bulunamadı.");
+      return;
+    }
+
+    setDeletingUser(true);
+    setError("");
+
+    try {
+      const encodedCreds = sessionStorage.getItem("adminAuth");
+      if (!encodedCreds) {
+        throw new Error("Admin credentials missing. Please re-login.");
+      }
+
+      const response = await fetch(`${API_BASE}/admin/users/${deleteUserTarget.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Basic ${encodedCreds}`
+        }
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete user");
+      }
+
+      setSuccessMessage(data.message || "Kullanıcı silindi.");
+      setDeleteUserDialogOpen(false);
+      setDeleteUserTarget(null);
+      await loadReportsAndSessions();
+      await loadDetailedReports();
+    } catch (err) {
+      setError("Failed to delete user: " + err.message);
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -659,11 +707,14 @@ function AdminPage() {
                               {header}
                             </th>
                           ))}
+                          <th style={{ padding: "12px", textAlign: "left", fontWeight: 700, color: "#333" }}>
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {allUsers.map((row, idx) => (
-                          <tr key={idx} style={{ borderBottom: "1px solid #E0E0E0" }}>
+                          <tr key={row.id ?? idx} style={{ borderBottom: "1px solid #E0E0E0" }}>
                             {allUsersColumns.map((col) => {
                               const isRowNumberCol = col === "Row Number";
                               const raw = isRowNumberCol ? idx + 1 : row[col];
@@ -675,6 +726,17 @@ function AdminPage() {
                                 </td>
                               );
                             })}
+                            <td style={{ padding: "12px", color: "#333" }}>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                onClick={() => promptDeleteUser(row)}
+                                disabled={!row.id}
+                              >
+                                Remove
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -776,6 +838,42 @@ function AdminPage() {
                   </Box>
                 </Paper>
               ))}
+
+              <Dialog
+                open={deleteUserDialogOpen}
+                onClose={() => !deletingUser && setDeleteUserDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+              >
+                <DialogTitle sx={{ color: "#d32f2f", fontWeight: 700 }}>
+                  Remove User
+                </DialogTitle>
+                <DialogContent>
+                  <Stack spacing={2} sx={{ pt: 1 }}>
+                    <Alert severity="warning">
+                      This will permanently delete the selected user and every reservation they made.
+                    </Alert>
+                    <Typography variant="body1">
+                      {deleteUserTarget
+                        ? `Remove ${deleteUserTarget.Name} ${deleteUserTarget["Last Name"]} (${deleteUserTarget["Phone Number"]})?`
+                        : "Remove the selected user?"}
+                    </Typography>
+                  </Stack>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setDeleteUserDialogOpen(false)} disabled={deletingUser}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDeleteUser}
+                    variant="contained"
+                    color="error"
+                    disabled={deletingUser}
+                  >
+                    {deletingUser ? "Removing..." : "Remove User"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
 
               {/* Download All Button */}
               {roomSessionForms.length > 0 && (

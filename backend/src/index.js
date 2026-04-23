@@ -496,6 +496,7 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
       orderBy: { id: "asc" }
     });
     const allUsers = users.map((user, index) => ({
+      id: user.id,
       "Row Number": index + 1,
       Name: user.name,
       "Last Name": user.lastName,
@@ -590,7 +591,9 @@ app.get("/admin/reports", requireAdmin, async (_req, res) => {
       peopleBySession,
       roomSessionForms,
       csv: {
-        allUsers: toCsv(allUsers),
+        allUsers: toCsv(
+          allUsers.map(({ id: _id, ...row }) => row)
+        ),
         peopleBySession: toCsv(peopleBySession),
         roomSessionForms: roomSessionFormsCsv,
         roomSessionFormsAll
@@ -619,6 +622,47 @@ app.post("/admin/clear-database", requireAdmin, async (_req, res) => {
   } catch (error) {
     console.error("POST /admin/clear-database error:", error);
     return res.status(500).json({ error: "Failed to clear database." });
+  }
+});
+
+app.delete("/admin/users/:userId", requireAdmin, async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ error: "Geçersiz kullanıcı kimliği." });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        _count: {
+          select: { reservations: true }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.reservation.deleteMany({
+        where: { userId }
+      });
+
+      await tx.user.delete({
+        where: { id: userId }
+      });
+    });
+
+    return res.json({
+      message: "Kullanıcı ve rezervasyonları silindi.",
+      deletedUserId: userId,
+      deletedReservationCount: user._count.reservations
+    });
+  } catch (error) {
+    console.error("DELETE /admin/users/:userId error:", error);
+    return res.status(500).json({ error: "Kullanıcı silinemedi." });
   }
 });
 app.get("*", (req, res, next) => {
