@@ -92,4 +92,5 @@ docker run -d -p 5173:80 appointment-manager-frontend
 - `GET /admin/sessions-by-room` — admin session + room capacity / availability (Basic Auth)
 - `PATCH /admin/sessions/:sessionId/capacity` — adjust capacity for a session (Basic Auth)
 - `GET /admin/reports` — admin report data with CSV payloads (Basic Auth)
+- `DELETE /admin/users/:userId` — remove one participant and all of their reservations (Basic Auth)
 - `POST /admin/clear-database` — clear all data and reset capacities (admin only)
